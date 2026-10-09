@@ -100,7 +100,7 @@ export default function MarketingLayout({
             <p>
               Securities offered through Forge Securities LLC, Member FINRA/SIPC. Private market securities are speculative, illiquid, and carry high risk of loss.
             </p>
-            <p>&copy; {new Date().getFullYear()} Forge Global, Inc. All rights reserved.</p>
+            <p>&copy; 2026 Forge Global, Inc. All rights reserved.</p>
           </div>
         </div>
       </footer>
