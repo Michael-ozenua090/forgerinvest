@@ -50,12 +50,13 @@ function SVGTerminalChart() {
 export default function TradingTerminalPage() {
   const params = useParams();
   const symbol = (params.symbol as string).toUpperCase();
-  const { user, executeTrade, setToast, stocks, activeCurrency } = useStore();
+  const { user, executeTrade, setToast, stocks, activeCurrency, cryptoBalances, holdings } = useStore();
   const company = stocks.find(s => s.symbol === symbol) || { name: symbol, sector: "Technology", price: 100, change: "+0.0%", valuation: "N/A", round: "N/A" };
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   // Mock Market Data (Crypto dynamically converted)
   const currentPriceCrypto = convertFiatToCrypto(company.price, activeCurrency);
@@ -76,6 +77,10 @@ export default function TradingTerminalPage() {
   const meetsMinimum = totalValueFiat >= minimumLotSizeFiat;
   const fee = meetsMinimum ? totalValueCrypto * brokerageFeeRate : 0;
   const netTotal = side === "buy" ? totalValueCrypto + fee : totalValueCrypto - fee;
+
+  const availableBalance = cryptoBalances[activeCurrency] ?? 0;
+  const position = holdings.find(p => p.symbol === symbol);
+  const availableShares = position?.shares || 0;
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
@@ -152,10 +157,10 @@ export default function TradingTerminalPage() {
         <div className="lg:col-span-1">
           <div className="clean-card p-6 sticky top-24 shadow-[0_12px_40px_rgba(0,0,0,0.06)]">
             <h3 className="font-display font-bold text-lg text-forge-gray-900 mb-4">Trade Shares</h3>
-            <button onClick={() => { setSide('buy'); setIsModalOpen(true); setShowSuccess(false); }} className="w-full py-3 mb-3 bg-market-up text-white font-bold rounded-lg hover:opacity-90 transition-opacity shadow-[0_4px_14px_rgba(0,184,115,0.25)]">
+            <button onClick={() => { setSide('buy'); setIsModalOpen(true); setShowSuccess(false); setOrderError(null); }} className="w-full py-3 mb-3 bg-market-up text-white font-bold rounded-lg hover:opacity-90 transition-opacity shadow-[0_4px_14px_rgba(0,184,115,0.25)]">
               Buy Shares
             </button>
-            <button onClick={() => { setSide('sell'); setIsModalOpen(true); setShowSuccess(false); }} className="w-full py-3 bg-white border border-forge-gray-200 text-forge-gray-900 font-bold rounded-lg hover:bg-forge-gray-50 transition-colors">
+            <button onClick={() => { setSide('sell'); setIsModalOpen(true); setShowSuccess(false); setOrderError(null); }} className="w-full py-3 bg-white border border-forge-gray-200 text-forge-gray-900 font-bold rounded-lg hover:bg-forge-gray-50 transition-colors">
               Sell Shares
             </button>
             <p className="text-center text-[10px] font-bold text-forge-gray-400 uppercase tracking-wider mt-4">
@@ -269,6 +274,14 @@ export default function TradingTerminalPage() {
                     </div>
                   </div>
 
+                  {/* Order Error Validation */}
+                  {orderError && (
+                    <div className="flex items-start gap-2 p-3 bg-red-50 text-red-700 rounded-lg text-xs font-bold mt-2">
+                      <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                      <p>{orderError}</p>
+                    </div>
+                  )}
+
                   {/* Validation Warning */}
                   {shares !== "" && !meetsMinimum && (
                     <div className="flex items-start gap-2 p-3 bg-red-50 text-red-700 rounded-lg text-xs font-bold">
@@ -281,10 +294,19 @@ export default function TradingTerminalPage() {
                   <button 
                     type="button"
                     onClick={() => {
+                      if (side === 'buy' && availableBalance < netTotal) {
+                        setOrderError(`Insufficient funds. You need ${formatCrypto(netTotal, activeCurrency)} but have ${formatCrypto(availableBalance, activeCurrency)}.`);
+                        return;
+                      }
+                      if (side === 'sell' && availableShares < numShares) {
+                        setOrderError(`Insufficient shares. You only own ${availableShares} shares.`);
+                        return;
+                      }
                       executeTrade(side === "buy" ? "BUY" : "SELL", symbol, company.name, numShares, priceTarget);
                       setToast("Trade order submitted successfully");
                       setShowSuccess(true);
                       setShares("");
+                      setOrderError(null);
                     }}
                     disabled={shares === "" || !meetsMinimum}
                     className={`w-full py-4 rounded-lg font-bold transition-all flex justify-center items-center gap-2 ${

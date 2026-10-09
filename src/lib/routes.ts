@@ -5,15 +5,20 @@
 export const ROUTES = {
   marketing: {
     home: "/",
-    marketplace: "/stocks",
-    funds: "/funds",
+    marketplace: "/marketplace",
+    forgePrice: "/forge-price",
+    privateIndices: "/private-indices",
     about: "/about",
-    contact: "/contact",
+    careers: "/careers",
+    press: "/press",
+    insights: "/insights",
     helpCenter: "/help-center",
+    contact: "/contact",
     legal: {
       terms: "/terms",
       privacy: "/privacy",
-    }
+      formCrs: "/form-crs",
+    },
   },
   auth: {
     login: "/login",
@@ -45,5 +50,5 @@ export const ROUTES = {
     },
     settings: "/settings",
     support: "/support",
-  }
+  },
 } as const;

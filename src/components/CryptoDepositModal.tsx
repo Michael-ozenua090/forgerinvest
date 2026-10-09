@@ -36,7 +36,10 @@ const NETWORKS: Record<CurrencyType, { name: string; tag: string; icon: string; 
 
 export function CryptoDepositModal({ isOpen, onClose }: CryptoDepositModalProps) {
   const { activeCurrency, depositFunds, setToast } = useStore();
-  const [tab, setTab] = useState<CurrencyType>(activeCurrency);
+  const initialTab: CurrencyType = (['BTC', 'ETH', 'SOL'] as CurrencyType[]).includes(activeCurrency) 
+    ? activeCurrency 
+    : 'BTC';
+  const [tab, setTab] = useState<CurrencyType>(initialTab);
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;

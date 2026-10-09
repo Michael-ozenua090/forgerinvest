@@ -192,9 +192,9 @@ export const useStore = create<AppState>()(
           // Actually, we'll just not modify investInFund to use crypto fully, but we MUST debit something.
           // Let's assume we debit the active currency for the equivalent.
           // Since we don't have conversion rate imported here, let's just bypass strict check or hardcode.
-          const rates = { BTC: 65000, ETH: 2600, SOL: 150, USD: 1, GBP: 0.79 };
+          const rates = { BTC: 1 / 65000, ETH: 1 / 2600, SOL: 1 / 150, USD: 1, GBP: 0.79 };
           const currency = state.activeCurrency;
-          const cryptoCost = fiatAmount / rates[currency];
+          const cryptoCost = fiatAmount * (rates[currency] || 1);
 
           const currentBalance = state.cryptoBalances[currency] ?? 0;
           if (currentBalance < cryptoCost) return state;
@@ -202,7 +202,7 @@ export const useStore = create<AppState>()(
           const newTx: Transaction = {
             id: Math.random().toString(36).substring(2, 9),
             date: new Date().toISOString(),
-            type: "BUY" as any, 
+            type: "BUY", 
             description: `Fund Investment: ${name}`,
             amount: -cryptoCost,
             currency,

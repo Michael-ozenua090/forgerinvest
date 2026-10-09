@@ -10,7 +10,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { formatCrypto } from "@/lib/format";
+import { formatCrypto, convertFiatToCrypto } from "@/lib/format";
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -93,7 +93,7 @@ export default function FundsPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-forge-gray-100 border-b border-forge-gray-100">
               <div className="p-4 sm:p-6 text-center">
                 <p className="text-xs font-bold text-forge-gray-500 uppercase tracking-wider mb-1">Current NAV</p>
-                <p className="tabular-nums font-display font-bold text-xl text-forge-gray-900">{formatCrypto(fund.nav, activeCurrency)}</p>
+                <p className="tabular-nums font-display font-bold text-xl text-forge-gray-900">{formatCrypto(convertFiatToCrypto(fund.nav, activeCurrency), activeCurrency)}</p>
               </div>
               <div className="p-4 sm:p-6 text-center bg-market-up/5">
                 <p className="text-xs font-bold text-forge-gray-500 uppercase tracking-wider mb-1">YTD Return</p>
@@ -107,7 +107,7 @@ export default function FundsPage() {
               </div>
               <div className="p-4 sm:p-6 text-center">
                 <p className="text-xs font-bold text-forge-gray-500 uppercase tracking-wider mb-1">Min Ticket</p>
-                <p className="tabular-nums font-display font-bold text-xl text-forge-gray-900">{formatCrypto(fund.minInvestment, activeCurrency)}</p>
+                <p className="tabular-nums font-display font-bold text-xl text-forge-gray-900">{formatCrypto(convertFiatToCrypto(fund.minInvestment, activeCurrency), activeCurrency)}</p>
               </div>
             </div>
 

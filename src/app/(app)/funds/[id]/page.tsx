@@ -8,7 +8,7 @@ import { useStore } from "@/lib/store";
 import { ROUTES } from "@/lib/routes";
 import { formatCrypto, convertFiatToCrypto } from "@/lib/format";
 
-const FUNDS_DATA: Record<string, any> = {
+const FUNDS_DATA: Record<string, Record<string, unknown>> = {
   "accuidity": {
     name: "Forge Accuidity Index",
     description: "A passively managed basket tracking the top 60 most liquid private technology companies. Optimized for broad pre-IPO market exposure.",
@@ -126,7 +126,7 @@ export default function FundDetailPage() {
               <h2 className="font-display font-bold text-lg text-forge-gray-900">Underlying Holdings</h2>
             </div>
             <ul className="divide-y divide-forge-gray-100">
-              {fund.holdings.map((holding: any, idx: number) => (
+              {(fund.holdings as Array<{ name: string, symbol: string, icon: React.ElementType, weight: string }>).map((holding, idx: number) => (
                 <li key={idx} className="p-6 flex items-center justify-between hover:bg-forge-gray-50 transition-colors">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-forge-gray-100 text-forge-gray-600 flex items-center justify-center">

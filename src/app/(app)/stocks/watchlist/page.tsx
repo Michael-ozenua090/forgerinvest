@@ -12,6 +12,8 @@ import {
 import { useStore } from "@/lib/store";
 import { ROUTES } from "@/lib/routes";
 
+import { formatCrypto, convertFiatToCrypto } from "@/lib/format";
+
 const getSectorIcon = (sector: string) => {
   if (sector.includes("Aerospace") || sector.includes("Defense")) return Rocket;
   if (sector.includes("Intelligence") || sector.includes("AI")) return Zap;
@@ -22,7 +24,7 @@ const getSectorIcon = (sector: string) => {
 const parseChange = (changeStr: string) => parseFloat(changeStr.replace('%', '').replace('+', ''));
 
 export default function WatchlistPage() {
-  const { watchlist, toggleWatchlist, stocks } = useStore();
+  const { watchlist, toggleWatchlist, stocks, activeCurrency } = useStore();
   
   const watchlistStocks = stocks.filter(s => watchlist.includes(s.symbol));
 
@@ -100,7 +102,7 @@ export default function WatchlistPage() {
                       <div>
                         <p className="text-xs font-medium text-forge-gray-500 mb-1">Forge Price™</p>
                         <div className="flex items-end gap-2">
-                          <span className="tabular-nums font-bold text-xl text-forge-gray-900">${item.price.toFixed(2)}</span>
+                          <span className="tabular-nums font-bold text-xl text-forge-gray-900">{formatCrypto(convertFiatToCrypto(item.price, activeCurrency), activeCurrency)}</span>
                           <span className={`tabular-nums text-xs font-bold flex items-center mb-1 ${isUp ? 'text-market-up' : 'text-market-down'}`}>
                             {isUp ? <TrendingUp size={12} className="mr-0.5" /> : null}
                             {isUp ? "+" : ""}{numChange}%

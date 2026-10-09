@@ -19,7 +19,7 @@ export default function TransactionsLedgerPage() {
     }
   };
 
-  const getFormat = (type: string, amount: number, currency: any) => {
+  const getFormat = (type: string, amount: number, currency: "BTC" | "ETH" | "SOL" | "USD" | "GBP") => {
     const formatted = formatCrypto(amount, currency);
     if (type === "DEPOSIT" || type === "SELL") {
       return <span className="text-market-up font-bold">+{formatted}</span>;
@@ -64,10 +64,10 @@ export default function TransactionsLedgerPage() {
                 <tr key={tx.id} className="hover:bg-forge-gray-50/50 transition-colors">
                   <td className="py-4 px-6 whitespace-nowrap">
                     <p className="text-sm font-bold text-forge-gray-900">
-                      {new Date(tx.timestamp).toLocaleDateString()}
+                      {new Date(tx.date).toLocaleDateString()}
                     </p>
                     <p className="text-xs font-bold text-forge-gray-400">
-                      {new Date(tx.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      {new Date(tx.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </p>
                   </td>
                   <td className="py-4 px-6">
@@ -81,7 +81,7 @@ export default function TransactionsLedgerPage() {
                     </div>
                   </td>
                   <td className="py-4 px-6">
-                    <span className="text-sm font-bold text-forge-gray-900">{tx.asset || tx.currency}</span>
+                    <span className="text-sm font-bold text-forge-gray-900">{tx.description || tx.currency}</span>
                   </td>
                   <td className="py-4 px-6 text-right tabular-nums text-sm">
                     {getFormat(tx.type, Math.abs(tx.amount), tx.currency)}

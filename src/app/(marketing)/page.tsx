@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { 
   ArrowRight, 
   TrendingUp, 
@@ -145,7 +146,7 @@ function EquityCard({ equity }: { equity: typeof featuredEquities[0] }) {
   if (equity.liquidity === "Moderate") liquidityColor = "bg-forge-orange/10 text-forge-orange";
 
   return (
-    <div className="clean-card-hover p-6 flex flex-col h-full">
+    <Link href={`/stocks/${equity.symbol}`} className="clean-card-hover p-6 flex flex-col h-full block">
       <div className="flex justify-between items-start mb-6">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-forge-gray-50 border border-forge-gray-200 flex items-center justify-center text-forge-orange">
@@ -178,7 +179,7 @@ function EquityCard({ equity }: { equity: typeof featuredEquities[0] }) {
           <span className="tabular-nums font-bold text-xl text-forge-gray-900">{equity.valuation}</span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -203,14 +204,14 @@ export default function MarketingPage() {
         </p>
         
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-body font-bold text-white bg-forge-orange hover:bg-forge-orange-hover shadow-[0_8px_24px_rgba(255,90,0,0.25)] transition-all transform hover:-translate-y-0.5">
+          <Link href="/stocks" className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-body font-bold text-white bg-forge-orange hover:bg-forge-orange-hover shadow-[0_8px_24px_rgba(255,90,0,0.25)] transition-all transform hover:-translate-y-0.5">
             Explore Companies
             <ArrowRight size={18} strokeWidth={2.5} />
-          </button>
+          </Link>
           
-          <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-body font-bold text-forge-gray-900 bg-white border-2 border-forge-gray-200 hover:border-forge-gray-900 hover:bg-forge-gray-50 transition-all">
+          <Link href="/stocks" className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-body font-bold text-forge-gray-900 bg-white border-2 border-forge-gray-200 hover:border-forge-gray-900 hover:bg-forge-gray-50 transition-all">
             Sell Shares
-          </button>
+          </Link>
         </div>
       </section>
 
@@ -227,9 +228,9 @@ export default function MarketingPage() {
                 Access deep liquidity in the world's most sought-after private companies.
               </p>
             </div>
-            <button className="flex items-center gap-2 font-bold text-forge-orange hover:text-forge-orange-hover transition-colors">
+            <Link href="/stocks" className="flex items-center gap-2 font-bold text-forge-orange hover:text-forge-orange-hover transition-colors">
               View full marketplace <ArrowRight size={16} strokeWidth={2.5} />
-            </button>
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

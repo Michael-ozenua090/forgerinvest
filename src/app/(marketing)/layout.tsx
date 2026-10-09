@@ -25,10 +25,10 @@ export default function MarketingLayout({
             </Link>
             <nav className="hidden md:flex items-center gap-6">
               <Link href={ROUTES.marketing.marketplace} className="text-sm font-semibold text-forge-gray-600 hover:text-forge-orange transition-colors">Marketplace</Link>
-              <Link href={ROUTES.marketing.marketplace} className="text-sm font-semibold text-forge-gray-600 hover:text-forge-orange transition-colors">Forge Price™</Link>
-              <Link href={ROUTES.marketing.funds} className="text-sm font-semibold text-forge-gray-600 hover:text-forge-orange transition-colors">Private Indices</Link>
+              <Link href={ROUTES.marketing.forgePrice} className="text-sm font-semibold text-forge-gray-600 hover:text-forge-orange transition-colors">Forge Price™</Link>
+              <Link href={ROUTES.marketing.privateIndices} className="text-sm font-semibold text-forge-gray-600 hover:text-forge-orange transition-colors">Private Indices</Link>
               <Link href={ROUTES.marketing.about} className="text-sm font-semibold text-forge-gray-600 hover:text-forge-orange transition-colors">About</Link>
-              <Link href={ROUTES.marketing.home} className="text-sm font-semibold text-forge-gray-600 hover:text-forge-orange transition-colors">Insights</Link>
+              <Link href={ROUTES.marketing.insights} className="text-sm font-semibold text-forge-gray-600 hover:text-forge-orange transition-colors">Insights</Link>
             </nav>
           </div>
 
@@ -51,50 +51,56 @@ export default function MarketingLayout({
       <main className="flex-grow">{children}</main>
 
       {/* ── Footer ───────────────────────────────────────────────────── */}
-      <footer className="bg-forge-gray-900 text-forge-gray-200 py-12 mt-16">
+      <footer className="bg-forge-gray-900 text-forge-gray-200 py-16 mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
+            {/* Platform */}
             <div>
-              <h3 className="font-bold text-white mb-4">Platform</h3>
-              <ul className="space-y-2 text-sm text-forge-gray-600">
-                <li><Link href={ROUTES.marketing.marketplace} className="hover:text-forge-orange">Marketplace</Link></li>
-                <li><Link href={ROUTES.marketing.marketplace} className="hover:text-forge-orange">Forge Price™</Link></li>
-                <li><Link href={ROUTES.marketing.funds} className="hover:text-forge-orange">Private Indices</Link></li>
+              <h3 className="font-display font-bold text-white mb-4 text-sm uppercase tracking-wider">Platform</h3>
+              <ul className="space-y-3 text-sm text-forge-gray-400">
+                <li><Link href={ROUTES.marketing.marketplace} className="hover:text-forge-orange transition-colors">Marketplace</Link></li>
+                <li><Link href={ROUTES.marketing.forgePrice} className="hover:text-forge-orange transition-colors">Forge Price™</Link></li>
+                <li><Link href={ROUTES.marketing.privateIndices} className="hover:text-forge-orange transition-colors">Private Indices</Link></li>
               </ul>
             </div>
+
+            {/* Company */}
             <div>
-              <h3 className="font-bold text-white mb-4">Company</h3>
-              <ul className="space-y-2 text-sm text-forge-gray-600">
-                <li><Link href={ROUTES.marketing.about} className="hover:text-forge-orange">About Us</Link></li>
-                <li><Link href={ROUTES.marketing.about} className="hover:text-forge-orange">Careers</Link></li>
-                <li><Link href={ROUTES.marketing.about} className="hover:text-forge-orange">Press</Link></li>
+              <h3 className="font-display font-bold text-white mb-4 text-sm uppercase tracking-wider">Company</h3>
+              <ul className="space-y-3 text-sm text-forge-gray-400">
+                <li><Link href={ROUTES.marketing.about} className="hover:text-forge-orange transition-colors">About Us</Link></li>
+                <li><Link href={ROUTES.marketing.careers} className="hover:text-forge-orange transition-colors">Careers</Link></li>
+                <li><Link href={ROUTES.marketing.press} className="hover:text-forge-orange transition-colors">Press</Link></li>
               </ul>
             </div>
+
+            {/* Resources */}
             <div>
-              <h3 className="font-bold text-white mb-4">Resources</h3>
-              <ul className="space-y-2 text-sm text-forge-gray-600">
-                <li><Link href={ROUTES.marketing.home} className="hover:text-forge-orange">Insights</Link></li>
-                <li><Link href={ROUTES.marketing.helpCenter} className="hover:text-forge-orange">Help Center</Link></li>
-                <li><Link href={ROUTES.marketing.contact} className="hover:text-forge-orange">Contact</Link></li>
+              <h3 className="font-display font-bold text-white mb-4 text-sm uppercase tracking-wider">Resources</h3>
+              <ul className="space-y-3 text-sm text-forge-gray-400">
+                <li><Link href={ROUTES.marketing.insights} className="hover:text-forge-orange transition-colors">Insights</Link></li>
+                <li><Link href={ROUTES.marketing.helpCenter} className="hover:text-forge-orange transition-colors">Help Center</Link></li>
+                <li><Link href={ROUTES.marketing.contact} className="hover:text-forge-orange transition-colors">Contact</Link></li>
               </ul>
             </div>
+
+            {/* Legal */}
             <div>
-              <h3 className="font-bold text-white mb-4">Legal</h3>
-              <ul className="space-y-2 text-sm text-forge-gray-600">
-                <li><Link href={ROUTES.marketing.legal.terms} className="hover:text-forge-orange">Terms of Service</Link></li>
-                <li><Link href={ROUTES.marketing.legal.privacy} className="hover:text-forge-orange">Privacy Policy</Link></li>
-                <li><Link href={ROUTES.marketing.legal.terms} className="hover:text-forge-orange">Form CRS</Link></li>
+              <h3 className="font-display font-bold text-white mb-4 text-sm uppercase tracking-wider">Legal</h3>
+              <ul className="space-y-3 text-sm text-forge-gray-400">
+                <li><Link href={ROUTES.marketing.legal.terms} className="hover:text-forge-orange transition-colors">Terms of Service</Link></li>
+                <li><Link href={ROUTES.marketing.legal.privacy} className="hover:text-forge-orange transition-colors">Privacy Policy</Link></li>
+                <li><Link href={ROUTES.marketing.legal.formCrs} className="hover:text-forge-orange transition-colors">Form CRS</Link></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-forge-gray-800 pt-8 text-xs text-forge-gray-600 space-y-4">
+
+          {/* Regulatory Disclaimers */}
+          <div className="border-t border-forge-gray-800 pt-8 text-xs text-forge-gray-500 space-y-3 leading-relaxed">
             <p>
-              Investing in private company securities is not suitable for all investors. It is highly speculative and involves a high degree of risk, including the possible loss of the entire investment.
+              Securities offered through Forge Securities LLC, Member FINRA/SIPC. Private market securities are speculative, illiquid, and carry high risk of loss.
             </p>
-            <p>
-              Forge Global, Inc. and its affiliates ("Forge") operate a leading platform for the private market. Securities-related services are offered through Forge Securities LLC, a registered broker-dealer and member FINRA/SIPC. 
-            </p>
-            <p>&copy; 2026 Forge Global, Inc. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Forge Global, Inc. All rights reserved.</p>
           </div>
         </div>
       </footer>

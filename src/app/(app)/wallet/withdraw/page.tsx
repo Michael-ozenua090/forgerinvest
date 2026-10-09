@@ -30,7 +30,7 @@ export default function WithdrawPage() {
   };
 
   const handleWithdraw = () => {
-    withdrawFunds(parseFloat(withdrawAmount));
+    withdrawFunds(activeCurrency, parseFloat(withdrawAmount));
     router.push("/wallet/transactions");
   };
 

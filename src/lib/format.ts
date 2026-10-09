@@ -1,9 +1,9 @@
 export type CurrencyType = 'BTC' | 'ETH' | 'SOL' | 'USD' | 'GBP';
 
 export const CONVERSION_RATES: Record<CurrencyType, number> = {
-  BTC: 65000,
-  ETH: 2600,
-  SOL: 150,
+  BTC: 1 / 65000,
+  ETH: 1 / 2600,
+  SOL: 1 / 150,
   USD: 1,
   GBP: 0.79,
 };
@@ -34,11 +34,11 @@ export const formatFiat = (amount: number) => {
 export const convertFiatToCrypto = (fiatAmount: number, currency: CurrencyType) => {
   const val = fiatAmount ?? 0;
   const rate = CONVERSION_RATES[currency] || 1;
-  return val / rate;
+  return val * rate;
 };
 
 export const convertCryptoToFiat = (cryptoAmount: number, currency: CurrencyType) => {
   const val = cryptoAmount ?? 0;
   const rate = CONVERSION_RATES[currency] || 1;
-  return val * rate;
+  return val / rate;
 };
