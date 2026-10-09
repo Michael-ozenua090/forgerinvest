@@ -1,0 +1,156 @@
+/* ─── Tailwind v4 Entry ───────────────────────────────────────────────────── */
+@import "tailwindcss";
+
+/* ─── Forge Design Tokens (Light Theme) ──────────────────────────────────────
+   Brand colors: White and Orange. Absolutely no blue.
+   ────────────────────────────────────────────────────────────────────────── */
+@theme {
+  /* ── Font Families ─────────────────────────────────────────────────────── */
+  --font-display:  var(--font-plus-jakarta-sans), "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-body:     var(--font-inter), "Inter", system-ui, sans-serif;
+  --font-data:     var(--font-space-grotesk), "Space Grotesk", monospace;
+
+  /* ── Forge Brand Primary (Orange) ───────────────────────────────────────── */
+  --color-forge-orange:          #FF5A00;
+  --color-forge-orange-hover:    #E55100;
+  --color-forge-orange-light:    #FF7D33;
+  --color-forge-orange-wash:     rgba(255, 90, 0, 0.08);
+
+  /* ── Forge Neutrals (Grays/Black/White) ─────────────────────────────────── */
+  --color-forge-black:           #000000;
+  --color-forge-gray-900:        #111827; /* Very dark text */
+  --color-forge-gray-600:        #4B5563; /* Secondary text */
+  --color-forge-gray-200:        #E5E7EB; /* Borders */
+  --color-forge-gray-50:         #F9FAFB; /* Subtle background fills */
+  --color-forge-white:           #FFFFFF;
+
+  /* ── Market Sentiment ───────────────────────────────────────────────────── */
+  --color-market-up:           #059669; /* Slightly darker green for light mode */
+  --color-market-down:         #DC2626; /* Slightly darker red for light mode */
+
+  /* ── Box Shadows ────────────────────────────────────────────────────────── */
+  --shadow-card:               0 4px 20px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover:         0 12px 32px rgba(255, 90, 0, 0.12);
+  --shadow-glow-orange:        0 0 32px rgba(255, 90, 0, 0.25);
+}
+
+/* ─── Root & Global Reset ──────────────────────────────────────────────────── */
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-forge-white);
+  color: var(--color-forge-gray-900);
+  font-family: var(--font-body);
+  /* A very subtle orange radial gradient at the top to give it brand flavor */
+  background-image: radial-gradient(
+    ellipse 60% 50% at 50% 0%,
+    rgba(255, 90, 0, 0.03) 0%,
+    transparent 100%
+  );
+  background-attachment: fixed;
+}
+
+/* ─── Clean Card Utility (Replaces Glassmorphism for Light Mode) ──────────── */
+@layer components {
+  .clean-card {
+    background-color: var(--color-forge-white);
+    border: 1px solid var(--color-forge-gray-200);
+    box-shadow: var(--shadow-card);
+    border-radius: 1rem;
+  }
+
+  .clean-card-hover {
+    background-color: var(--color-forge-white);
+    border: 1px solid var(--color-forge-gray-200);
+    box-shadow: var(--shadow-card);
+    border-radius: 1rem;
+    transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+  }
+
+  .clean-card-hover:hover {
+    box-shadow: var(--shadow-card-hover);
+    border-color: rgba(255, 90, 0, 0.30);
+    transform: translateY(-2px);
+  }
+
+  /* ── Marquee Animation ─────────────────────────────────────────────────── */
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  .animate-marquee {
+    animation: marquee 30s linear infinite;
+  }
+  
+  .animate-marquee:hover {
+    animation-play-state: paused;
+  }
+}
+
+/* ─── Typography Utilities ─────────────────────────────────────────────────── */
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-body {
+    font-family: var(--font-body);
+  }
+
+  .font-data {
+    font-family: var(--font-data);
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    font-family: var(--font-data);
+    letter-spacing: 0.01em;
+  }
+
+  /* Gradient text — Dark Gray to Orange for Light Mode */
+  .text-gradient-forge {
+    background: linear-gradient(135deg, #111827 0%, #FF5A00 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+/* ─── Scrollbar Styling ────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-forge-gray-50);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 90, 0, 0.40);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 90, 0, 0.70);
+}
+
+::selection {
+  background-color: rgba(255, 90, 0, 0.20);
+  color: var(--color-forge-gray-900);
+}
+
+:focus-visible {
+  outline: 2px solid rgba(255, 90, 0, 0.80);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
