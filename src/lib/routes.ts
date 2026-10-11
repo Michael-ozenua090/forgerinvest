@@ -49,6 +49,7 @@ export const ROUTES = {
       analytics: "/portfolio/analytics",
     },
     settings: "/settings",
+    kyc: "/kyc",
     support: "/support",
   },
 } as const;

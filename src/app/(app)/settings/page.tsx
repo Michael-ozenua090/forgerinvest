@@ -65,7 +65,7 @@ export default function SettingsPage() {
                     <p className="text-sm font-medium opacity-90">Complete KYC to trade.</p>
                   </div>
                 </div>
-                <Link href={ROUTES.auth.kyc} className="bg-forge-orange text-white text-center py-2 rounded-lg font-bold hover:bg-forge-orange-hover transition-colors">
+                <Link href={ROUTES.app.kyc} className="bg-forge-orange text-white text-center py-2 rounded-lg font-bold hover:bg-forge-orange-hover transition-colors">
                   Verify Now
                 </Link>
               </div>

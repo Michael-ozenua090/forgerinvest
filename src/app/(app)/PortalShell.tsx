@@ -16,7 +16,8 @@ import {
   ChevronRight,
   Activity,
   CheckCircle2,
-  Menu
+  Menu,
+  ShieldCheck
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -35,6 +36,7 @@ const navLinks = [
   { name: "Private Funds", icon: Landmark, href: ROUTES.app.funds.directory },
   { name: "Wallet / Funding", icon: Wallet, href: ROUTES.app.wallet.home },
   { name: "Settings", icon: Settings, href: ROUTES.app.settings },
+  { name: "KYC Verification", icon: ShieldCheck, href: ROUTES.app.kyc },
   { name: "Support", icon: LifeBuoy, href: ROUTES.app.support },
 ];
 
@@ -130,7 +132,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
               <span className="text-[10px] font-bold uppercase tracking-wider">Accredited Investor</span>
             </div>
           ) : (
-            <Link href={ROUTES.auth.kyc} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-forge-orange-wash text-forge-orange border border-forge-orange/20 hover:bg-forge-orange/20 transition-colors">
+            <Link href={ROUTES.app.kyc} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-forge-orange-wash text-forge-orange border border-forge-orange/20 hover:bg-forge-orange/20 transition-colors">
               <span className="text-[10px] font-bold uppercase tracking-wider">Verify Accreditation</span>
             </Link>
           )}
