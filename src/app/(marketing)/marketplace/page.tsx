@@ -1,57 +1,97 @@
 import Link from 'next/link';
+import { Sparkles, ArrowRight, ShieldCheck, Clock, TrendingUp } from 'lucide-react';
+import { PLAN_CONFIG, PlanDurationMonths } from '@/lib/format';
+import { ROUTES } from '@/lib/routes';
 
 export default function MarketplacePage() {
-  const stocks = [
-    { name: 'Databricks', sector: 'Data & AI', forgePrice: '$73.50', valuation: '$43B' },
-    { name: 'Stripe', sector: 'Fintech', forgePrice: '$42.10', valuation: '$65B' },
-    { name: 'SpaceX', sector: 'Aerospace', forgePrice: '$112.00', valuation: '$180B' },
-    { name: 'Anthropic', sector: 'AI', forgePrice: '$30.25', valuation: '$18B' },
-    { name: 'Shield AI', sector: 'Defense', forgePrice: '$15.80', valuation: '$2.8B' },
-  ];
+  const plans = Object.values(PLAN_CONFIG) as (typeof PLAN_CONFIG)[PlanDurationMonths][];
 
   return (
-    <div className="container mx-auto px-4 py-12">
-      <h1 className="text-4xl font-bold mb-4">Forge Marketplace</h1>
-      <p className="text-xl text-gray-600 mb-8">Discover pre-IPO opportunities with real-time Forge Price™ data.</p>
-      
-      <div className="flex flex-wrap gap-4 mb-8">
-        <button className="px-4 py-2 bg-gray-200 rounded-full font-medium">All Sectors</button>
-        <button className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full transition">Data & AI</button>
-        <button className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full transition">Fintech</button>
-        <button className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full transition">Aerospace</button>
-        <button className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-full transition">Defense</button>
+    <div className="container mx-auto px-4 py-16 max-w-6xl">
+      <div className="mb-10 text-center max-w-2xl mx-auto">
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-forge-orange-wash text-forge-orange rounded-full text-xs font-bold uppercase tracking-wider mb-3 border border-forge-orange/20">
+          <Sparkles size={14} /> Fixed-Term Growth Plans
+        </div>
+        <h1 className="text-4xl font-extrabold text-forge-gray-900 tracking-tight font-display">
+          Capital Accumulation Plans
+        </h1>
+        <p className="text-base text-forge-gray-600 mt-2">
+          Contracted guaranteed compounding yields. Commit capital in USD, GBP, BTC, ETH, or SOL with automated maturity disbursements.
+        </p>
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {stocks.map((stock) => (
-          <div key={stock.name} className="border rounded-xl p-6 bg-white hover:shadow-lg transition-all relative group overflow-hidden">
-            <h3 className="text-2xl font-semibold mb-2">{stock.name}</h3>
-            <p className="text-sm text-gray-500 mb-4">{stock.sector}</p>
-            <div className="flex justify-between items-end mb-2">
-              <div>
-                <p className="text-sm text-gray-500">Forge Price™</p>
-                <p className="text-xl font-bold tabular-nums">{stock.forgePrice}</p>
+        {plans.map((plan) => (
+          <div 
+            key={plan.months} 
+            className="clean-card bg-white rounded-2xl p-6 border border-forge-gray-200 shadow-sm hover:shadow-md hover:border-forge-orange transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex justify-between items-start mb-4">
+                <span className="text-xs font-bold uppercase tracking-wider text-forge-gray-500 flex items-center gap-1.5">
+                  <Clock size={14} className="text-forge-orange" /> {plan.label} Horizon
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-market-up/10 text-market-up border border-market-up/20">
+                  Guaranteed
+                </span>
               </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-500">Implied Valuation</p>
-                <p className="text-lg font-medium tabular-nums">{stock.valuation}</p>
+
+              <div className="my-3">
+                <div className="font-display font-extrabold text-4xl text-forge-orange tabular-nums">
+                  +{plan.ratePercent}%
+                </div>
+                <p className="text-xs font-semibold text-forge-gray-500 mt-1">Contracted Fixed Return</p>
+              </div>
+
+              <div className="space-y-2 py-4 border-t border-forge-gray-100 text-xs text-forge-gray-600">
+                <div className="flex justify-between">
+                  <span>Minimum Capital:</span>
+                  <strong className="text-forge-gray-900">$50.00 USD</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Payout Schedule:</span>
+                  <strong className="text-forge-gray-900">At Duration Completion</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Supported Assets:</span>
+                  <strong className="text-forge-gray-900">USD, GBP, BTC, ETH, SOL</strong>
+                </div>
               </div>
             </div>
-            
-            {/* Overlay prompt on hover */}
-            <div className="absolute inset-0 bg-white/95 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-center p-6 transition-opacity rounded-xl border-2 border-forge-orange z-10">
-              <p className="text-lg font-medium mb-4">Sign In or Register to Access Live Order Books & Execute Trades</p>
-              <div className="flex gap-3">
-                <Link href="/login" className="px-4 py-2 bg-forge-orange text-white font-medium rounded-lg hover:bg-forge-orange-hover transition shadow-sm">
-                  Sign In
-                </Link>
-                <Link href="/register" className="px-4 py-2 bg-gray-100 text-forge-orange font-medium rounded-lg hover:bg-gray-200 transition">
-                  Register
-                </Link>
-              </div>
+
+            <div className="pt-4 border-t border-forge-gray-100">
+              <Link 
+                href={ROUTES.auth.register} 
+                className="w-full py-3 bg-forge-orange text-white font-bold rounded-xl hover:bg-forge-orange-hover transition-colors shadow-sm text-sm flex items-center justify-center gap-2"
+              >
+                Select {plan.label} Plan
+                <ArrowRight size={16} />
+              </Link>
             </div>
           </div>
         ))}
+
+        {/* Custom Tier Card */}
+        <div className="clean-card bg-forge-gray-900 text-white rounded-2xl p-6 border border-forge-gray-800 shadow-md flex flex-col justify-between">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-white/10 text-white text-xs font-bold uppercase tracking-wider mb-4">
+              <TrendingUp size={14} className="text-forge-orange" /> Institutional
+            </div>
+            <h3 className="font-display font-extrabold text-2xl text-white mb-2">
+              Custom Growth Allocation
+            </h3>
+            <p className="text-xs text-forge-gray-300 leading-relaxed mb-4">
+              For capital commitments above $10,000 USD, custom multi-month compounding schedules with personalized liquidity terms are available.
+            </p>
+          </div>
+
+          <Link 
+            href={ROUTES.marketing.contact} 
+            className="w-full py-3 bg-white text-forge-gray-900 font-bold rounded-xl hover:bg-forge-gray-100 transition-colors text-sm text-center"
+          >
+            Contact Private Client Desk
+          </Link>
+        </div>
       </div>
     </div>
   );

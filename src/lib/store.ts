@@ -1,5 +1,15 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { 
+  CurrencyType, 
+  PlanDurationMonths, 
+  PLAN_CONFIG, 
+  DEFAULT_RATES, 
+  convertCryptoToFiat,
+  convertFiatToCrypto 
+} from './format';
+
+export type { CurrencyType, PlanDurationMonths };
 
 export interface User {
   name: string;
@@ -8,29 +18,24 @@ export interface User {
   kycStatus: "pending" | "verified" | "unverified";
 }
 
-export type CurrencyType = 'BTC' | 'ETH' | 'SOL' | 'USD' | 'GBP';
-
-export interface Stock {
-  symbol: string;
-  name: string;
-  price: number;
-  change: string;
-  round: string;
-  valuation: string;
-  sector: string;
-}
-
-export interface Position {
-  symbol: string;
-  name: string;
-  shares: number;
-  costBasis: number;
+export interface SavingsPlan {
+  id: string;
+  capital: number; // stored in base USD
+  currency: CurrencyType;
+  durationMonths: PlanDurationMonths;
+  interestRatePercent: number; // 6, 15, 27, 66, 162
+  projectedProfit: number; // in USD
+  totalPayout: number; // in USD
+  startDate: string;
+  maturityDate: string;
+  isMatured: boolean;
+  status: 'ACTIVE' | 'MATURED' | 'WITHDRAWN';
 }
 
 export interface Transaction {
   id: string;
   date: string;
-  type: 'BUY' | 'SELL' | 'DEPOSIT' | 'WITHDRAW';
+  type: 'DEPOSIT' | 'WITHDRAW' | 'PLAN_STAKE' | 'PLAN_PAYOUT';
   description: string;
   amount: number;
   currency: CurrencyType;
@@ -46,24 +51,31 @@ export interface Notification {
 
 export interface AppState {
   user: User;
+  isKycCompleted: boolean;
   activeCurrency: CurrencyType;
+  liveRates: Record<CurrencyType, number>;
   cryptoBalances: Record<CurrencyType, number>;
-  holdings: Position[];
-  watchlist: string[];
+  savingsPlans: SavingsPlan[];
   transactions: Transaction[];
   notifications: Notification[];
-  stocks: Stock[];
   toastMessage: string | null;
   isDepositModalOpen: boolean;
 
+  fetchRates: () => Promise<void>;
   setDepositModalOpen: (isOpen: boolean) => void;
   setCurrency: (currency: CurrencyType) => void;
-  executeTrade: (type: 'BUY' | 'SELL', symbol: string, name: string, shares: number, cryptoPricePerShare: number) => void;
-  investInFund: (fundId: string, name: string, fiatAmount: number) => void;
-  toggleWatchlist: (symbol: string) => void;
+  createPlan: (
+    amount: number,
+    currency: CurrencyType,
+    duration: PlanDurationMonths
+  ) => boolean;
+  withdrawPlan: (planId: string) => { success: boolean; requiresKyc?: boolean; error?: string };
   depositFunds: (currency: CurrencyType, amount: number) => void;
-  withdrawFunds: (currency: CurrencyType, amount: number) => void;
-  completeKYC: () => void;
+  withdrawFunds: (
+    currency: CurrencyType,
+    amount: number
+  ) => { success: boolean; requiresKyc?: boolean; error?: string };
+  completeKYC: (data?: any) => void;
   setToast: (msg: string | null) => void;
   markNotificationsAsRead: () => void;
 }
@@ -73,176 +85,217 @@ export const useStore = create<AppState>()(
     (set, get) => ({
       user: {
         name: "Misha Stark",
-        email: "misha@forgeglobal.com",
-        isVerified: true,
-        kycStatus: "verified",
+        email: "misha@forgecapital.com",
+        isVerified: false,
+        kycStatus: "unverified",
       },
-      activeCurrency: 'BTC',
+      isKycCompleted: false, // Intentional KYC friction gate: starts false to trigger the withdrawal gate
+      activeCurrency: 'USD',
+      liveRates: DEFAULT_RATES,
       cryptoBalances: {
-        BTC: 1.2450,
-        ETH: 18.650,
-        SOL: 245.80,
-        USD: 75000.00,
-        GBP: 59000.00,
+        BTC: 0.850,
+        ETH: 8.500,
+        SOL: 120.00,
+        USD: 15000.00,
+        GBP: 12000.00,
       },
-      holdings: [
-        { symbol: "DBX", name: "Databricks", shares: 150, costBasis: 210.0 },
-        { symbol: "STRP", name: "Stripe", shares: 80, costBasis: 72.0 },
+      savingsPlans: [
+        {
+          id: "plan-sample-active",
+          capital: 500,
+          currency: "USD",
+          durationMonths: 3,
+          interestRatePercent: 27,
+          projectedProfit: 135,
+          totalPayout: 635,
+          startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          maturityDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+          isMatured: false,
+          status: 'ACTIVE',
+        },
+        {
+          id: "plan-sample-matured",
+          capital: 250,
+          currency: "USD",
+          durationMonths: 1,
+          interestRatePercent: 6,
+          projectedProfit: 15,
+          totalPayout: 265,
+          startDate: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString(),
+          maturityDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          isMatured: true,
+          status: 'MATURED',
+        },
       ],
-      watchlist: ["STRP", "SPX", "ANTH"],
-      transactions: [],
-      notifications: [],
-      stocks: [
-        { symbol: "DBX", name: "Databricks", price: 268.50, change: "+36.7%", round: "Series L-2", valuation: "$190B", sector: "Data Intelligence" },
-        { symbol: "STRP", name: "Stripe", price: 72.45, change: "+0.0%", round: "Tender Offer", valuation: "$159B", sector: "Fintech" },
-        { symbol: "SPX", name: "SpaceX", price: 135.00, change: "+22.4%", round: "Secondary", valuation: "$210B", sector: "Aerospace" },
-        { symbol: "ANTH", name: "Anthropic", price: 38.20, change: "+45.1%", round: "Series D", valuation: "$18.5B", sector: "Artificial Intelligence" },
-        { symbol: "SHLD", name: "Shield AI", price: 172.04, change: "+11.9%", round: "Series G", valuation: "$12.7B", sector: "Defense Tech" },
-        { symbol: "NURA", name: "Neuralink", price: 50.50, change: "+8.3%", round: "Series E", valuation: "$9.6B", sector: "Healthcare" },
-        { symbol: "RIPL", name: "Rippling", price: 47.28, change: "-21.2%", round: "Tender Offer", valuation: "$16.8B", sector: "Enterprise Software" },
+      transactions: [
+        {
+          id: "tx-init-1",
+          date: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString(),
+          type: "PLAN_STAKE",
+          description: "1-Month Fixed Growth Plan ($250.00 USD @ +6%)",
+          amount: -250,
+          currency: "USD",
+          status: "COMPLETED",
+        },
+        {
+          id: "tx-init-2",
+          date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          type: "PLAN_STAKE",
+          description: "3-Month Compounding Growth Plan ($500.00 USD @ +27%)",
+          amount: -500,
+          currency: "USD",
+          status: "COMPLETED",
+        },
+      ],
+      notifications: [
+        {
+          id: "notif-1",
+          message: "Plan matured: Your 1-Month Plan ($250) has finished with +6% profit ($265.00 total payout ready).",
+          timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          read: false,
+        },
       ],
       toastMessage: null,
       isDepositModalOpen: false,
 
+      fetchRates: async () => {
+        try {
+          const res = await fetch("/api/rates");
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.rates) {
+              set({ liveRates: data.rates });
+            }
+          }
+        } catch {
+          // Gracefully fallback to static rates
+        }
+      },
+
       setDepositModalOpen: (isOpen) => set({ isDepositModalOpen: isOpen }),
       setCurrency: (currency) => set({ activeCurrency: currency }),
 
-      executeTrade: (type, symbol, name, shares, cryptoPricePerShare) => {
-        set((state) => {
-          const currency = state.activeCurrency;
-          const totalValue = shares * cryptoPricePerShare;
-          const fee = totalValue * 0.01; // 1% crypto fee
-          let newBalance = state.cryptoBalances[currency] ?? 0;
-          const newHoldings = [...state.holdings];
-          const positionIndex = newHoldings.findIndex(p => p.symbol === symbol);
+      createPlan: (amount, currency, duration) => {
+        const state = get();
+        const currentBalance = state.cryptoBalances[currency] ?? 0;
 
-          if (type === 'BUY') {
-            const totalCost = totalValue + fee;
-            if (newBalance < totalCost) {
-              console.error("Insufficient crypto funds");
-              return state;
-            }
-            newBalance -= totalCost;
+        // Check wallet balance
+        if (currentBalance < amount) {
+          set({ toastMessage: "Insufficient balance in selected currency." });
+          return false;
+        }
 
-            if (positionIndex >= 0) {
-              const pos = newHoldings[positionIndex];
-              const totalShares = pos.shares + shares;
-              // costBasis in fiat terms is tricky, but for simplicity here we track it in FIAT by retrieving the stock price
-              // since holdings usually track base cost. However, the requirement says we want crypto PnL. 
-              // Wait, let's keep costBasis in FIAT because that's what we have in the stocks array, or we can compute everything dynamically.
-              // Actually, we'll keep the costBasis in FIAT for stability (1 share = $X), or convert it.
-              // We'll store it as fiat. The stock price is fiat. We'll derive crypto on the fly in the UI.
-              const stock = state.stocks.find(s => s.symbol === symbol);
-              const fiatPrice = stock ? stock.price : 0;
-              const newCostBasis = ((pos.shares * pos.costBasis) + (shares * fiatPrice)) / totalShares;
-              newHoldings[positionIndex] = { ...pos, shares: totalShares, costBasis: newCostBasis };
-            } else {
-              const stock = state.stocks.find(s => s.symbol === symbol);
-              newHoldings.push({ symbol, name, shares, costBasis: stock ? stock.price : 0 });
-            }
-          } else if (type === 'SELL') {
-            if (positionIndex < 0 || newHoldings[positionIndex].shares < shares) {
-              console.error("Insufficient shares");
-              return state;
-            }
-            const netProceeds = totalValue - fee;
-            newBalance += netProceeds;
+        // Convert amount to USD base for uniform tracking
+        const capitalUsd = convertCryptoToFiat(amount, currency, state.liveRates);
+        if (capitalUsd < 50) {
+          set({ toastMessage: "Minimum capital requirement is $50.00 USD." });
+          return false;
+        }
 
-            const pos = newHoldings[positionIndex];
-            const remainingShares = pos.shares - shares;
-            if (remainingShares === 0) {
-              newHoldings.splice(positionIndex, 1);
-            } else {
-              newHoldings[positionIndex] = { ...pos, shares: remainingShares };
-            }
-          }
+        const config = PLAN_CONFIG[duration] || PLAN_CONFIG[1];
+        const profitUsd = capitalUsd * (config.ratePercent / 100);
+        const payoutUsd = capitalUsd + profitUsd;
 
-          const newTx: Transaction = {
-            id: Math.random().toString(36).substring(2, 9),
-            date: new Date().toISOString(),
-            type,
-            description: `${type === 'BUY' ? 'Bought' : 'Sold'} ${shares} shares of ${symbol}`,
-            amount: type === 'BUY' ? -(totalValue + fee) : (totalValue - fee),
-            currency,
-            status: 'COMPLETED'
-          };
+        const now = new Date();
+        const maturity = new Date();
+        maturity.setMonth(maturity.getMonth() + duration);
 
-          const newNotification: Notification = {
-            id: Math.random().toString(36).substring(2, 9),
-            message: `Order Executed: ${type} ${shares} ${symbol} @ ${cryptoPricePerShare.toFixed(5)} ${currency}`,
-            timestamp: new Date().toISOString(),
-            read: false
-          };
+        const newPlan: SavingsPlan = {
+          id: "plan-" + Math.random().toString(36).substring(2, 9),
+          capital: capitalUsd,
+          currency,
+          durationMonths: duration,
+          interestRatePercent: config.ratePercent,
+          projectedProfit: profitUsd,
+          totalPayout: payoutUsd,
+          startDate: now.toISOString(),
+          maturityDate: maturity.toISOString(),
+          isMatured: false,
+          status: 'ACTIVE',
+        };
 
-          return {
-            cryptoBalances: { ...state.cryptoBalances, [currency]: newBalance },
-            holdings: newHoldings,
-            transactions: [newTx, ...state.transactions],
-            notifications: [newNotification, ...state.notifications]
-          };
+        const newTx: Transaction = {
+          id: "tx-" + Math.random().toString(36).substring(2, 9),
+          date: now.toISOString(),
+          type: "PLAN_STAKE",
+          description: `${config.label} Fixed Growth Plan (${amount.toFixed(2)} ${currency} @ +${config.ratePercent}%)`,
+          amount: -amount,
+          currency,
+          status: "COMPLETED",
+        };
+
+        const newNotification: Notification = {
+          id: "notif-" + Math.random().toString(36).substring(2, 9),
+          message: `Active Plan Started: ${amount.toFixed(2)} ${currency} locked for ${config.label} (+${config.ratePercent}% return).`,
+          timestamp: now.toISOString(),
+          read: false,
+        };
+
+        set({
+          cryptoBalances: {
+            ...state.cryptoBalances,
+            [currency]: currentBalance - amount,
+          },
+          savingsPlans: [newPlan, ...state.savingsPlans],
+          transactions: [newTx, ...state.transactions],
+          notifications: [newNotification, ...state.notifications],
+          toastMessage: `Successfully activated ${config.label} Growth Plan!`,
         });
+
+        return true;
       },
 
-      investInFund: (fundId, name, fiatAmount) => {
-        set((state) => {
-          // For funds we assume they cost Fiat but we deduct from active crypto balance.
-          // In a real app we'd convert it at the exact moment. We'll skip funds for crypto for now,
-          // or just assume they require BTC. Let's do a simple conversion here if needed.
-          // Actually, we'll just not modify investInFund to use crypto fully, but we MUST debit something.
-          // Let's assume we debit the active currency for the equivalent.
-          // Since we don't have conversion rate imported here, let's just bypass strict check or hardcode.
-          const rates = { BTC: 1 / 65000, ETH: 1 / 2600, SOL: 1 / 150, USD: 1, GBP: 0.79 };
-          const currency = state.activeCurrency;
-          const cryptoCost = fiatAmount * (rates[currency] || 1);
+      withdrawPlan: (planId) => {
+        const state = get();
+        const plan = state.savingsPlans.find((p) => p.id === planId);
 
-          const currentBalance = state.cryptoBalances[currency] ?? 0;
-          if (currentBalance < cryptoCost) return state;
+        if (!plan) return { success: false, error: "Plan not found." };
+        if (plan.status !== 'MATURED') {
+          return { success: false, error: "Plan has not matured yet." };
+        }
 
-          const newTx: Transaction = {
-            id: Math.random().toString(36).substring(2, 9),
-            date: new Date().toISOString(),
-            type: "BUY", 
-            description: `Fund Investment: ${name}`,
-            amount: -cryptoCost,
-            currency,
-            status: "COMPLETED",
-          };
-
-          const newHolding: Position = {
-            symbol: fundId.toUpperCase(),
-            name,
-            shares: fiatAmount, // representing $ invested
-            costBasis: 1, 
-          };
-
-          const newNotification: Notification = {
-            id: Math.random().toString(36).substring(2, 9),
-            message: `Investment of $${fiatAmount.toLocaleString()} into ${name} executed.`,
-            timestamp: new Date().toISOString(),
-            read: false
-          };
-
+        // INTENTIONAL KYC WITHDRAWAL GATE
+        if (!state.isKycCompleted) {
           return {
-            cryptoBalances: {
-              ...state.cryptoBalances,
-              [currency]: (state.cryptoBalances[currency] ?? 0) - cryptoCost
-            },
-            holdings: [...state.holdings, newHolding],
-            transactions: [newTx, ...state.transactions],
-            notifications: [newNotification, ...state.notifications]
+            success: false,
+            requiresKyc: true,
+            error: "Identity verification required before withdrawing matured capital.",
           };
-        });
-      },
+        }
 
-      toggleWatchlist: (symbol) => {
-        set((state) => {
-          const isWatched = state.watchlist.includes(symbol);
-          return {
-            watchlist: isWatched
-              ? state.watchlist.filter(s => s !== symbol)
-              : [...state.watchlist, symbol]
-          };
+        // Calculate payout in plan's currency
+        const payoutCurrencyAmount = convertFiatToCrypto(
+          plan.totalPayout,
+          plan.currency,
+          state.liveRates
+        );
+
+        const now = new Date();
+        const newTx: Transaction = {
+          id: "tx-" + Math.random().toString(36).substring(2, 9),
+          date: now.toISOString(),
+          type: "PLAN_PAYOUT",
+          description: `Matured Payout: ${plan.durationMonths}-Month Plan (+${plan.interestRatePercent}% Profit Disbursed)`,
+          amount: payoutCurrencyAmount,
+          currency: plan.currency,
+          status: "COMPLETED",
+        };
+
+        const updatedPlans = state.savingsPlans.map((p) =>
+          p.id === planId ? { ...p, status: 'WITHDRAWN' as const } : p
+        );
+
+        set({
+          cryptoBalances: {
+            ...state.cryptoBalances,
+            [plan.currency]: (state.cryptoBalances[plan.currency] ?? 0) + payoutCurrencyAmount,
+          },
+          savingsPlans: updatedPlans,
+          transactions: [newTx, ...state.transactions],
+          toastMessage: `Successfully claimed ${payoutCurrencyAmount.toFixed(2)} ${plan.currency} payout!`,
         });
+
+        return { success: true };
       },
 
       depositFunds: (currency, amount) => {
@@ -251,42 +304,65 @@ export const useStore = create<AppState>()(
             id: Math.random().toString(36).substring(2, 9),
             date: new Date().toISOString(),
             type: 'DEPOSIT',
-            description: `${currency} Native Deposit`,
+            description: `${currency} Capital Deposit`,
             amount: amount,
             currency,
-            status: 'COMPLETED'
+            status: 'COMPLETED',
           };
           return {
-            cryptoBalances: { ...state.cryptoBalances, [currency]: (state.cryptoBalances[currency] ?? 0) + amount },
-            transactions: [newTx, ...state.transactions]
+            cryptoBalances: {
+              ...state.cryptoBalances,
+              [currency]: (state.cryptoBalances[currency] ?? 0) + amount,
+            },
+            transactions: [newTx, ...state.transactions],
           };
         });
       },
 
       withdrawFunds: (currency, amount) => {
-        set((state) => {
-          const currentBalance = state.cryptoBalances[currency] ?? 0;
-          if (currentBalance < amount) return state;
-          
-          const newTx: Transaction = {
-            id: Math.random().toString(36).substring(2, 9),
-            date: new Date().toISOString(),
-            type: 'WITHDRAW',
-            description: `${currency} Withdrawal to External Wallet`,
-            amount: -amount,
-            currency,
-            status: 'COMPLETED'
-          };
+        const state = get();
+
+        // INTENTIONAL KYC WITHDRAWAL GATE
+        if (!state.isKycCompleted) {
           return {
-            cryptoBalances: { ...state.cryptoBalances, [currency]: currentBalance - amount },
-            transactions: [newTx, ...state.transactions]
+            success: false,
+            requiresKyc: true,
+            error: "Identity Verification Required: Before withdrawing your capital and interest profits, regulatory compliance requires you to complete KYC verification.",
           };
+        }
+
+        const currentBalance = state.cryptoBalances[currency] ?? 0;
+        if (currentBalance < amount) {
+          return { success: false, error: "Insufficient balance for withdrawal." };
+        }
+
+        const newTx: Transaction = {
+          id: Math.random().toString(36).substring(2, 9),
+          date: new Date().toISOString(),
+          type: 'WITHDRAW',
+          description: `${currency} Withdrawal to External Account`,
+          amount: -amount,
+          currency,
+          status: 'COMPLETED',
+        };
+
+        set({
+          cryptoBalances: {
+            ...state.cryptoBalances,
+            [currency]: currentBalance - amount,
+          },
+          transactions: [newTx, ...state.transactions],
+          toastMessage: `Withdrawal of ${amount.toFixed(2)} ${currency} submitted!`,
         });
+
+        return { success: true };
       },
 
       completeKYC: () => {
         set((state) => ({
-          user: { ...state.user, kycStatus: "verified", isVerified: true }
+          isKycCompleted: true,
+          user: { ...state.user, kycStatus: "verified", isVerified: true },
+          toastMessage: "Identity verified successfully. You may now withdraw funds.",
         }));
       },
 
@@ -296,13 +372,12 @@ export const useStore = create<AppState>()(
 
       markNotificationsAsRead: () => {
         set((state) => ({
-          notifications: state.notifications.map(n => ({ ...n, read: true }))
+          notifications: state.notifications.map((n) => ({ ...n, read: true })),
         }));
-      }
-
+      },
     }),
     {
-      name: 'forge-storage',
+      name: 'forge-savings-storage',
     }
   )
 );

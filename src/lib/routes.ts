@@ -1,11 +1,12 @@
 /**
- * Centralized Route Registry for the Forge Platform
+ * Centralized Route Registry for the Forge High-Growth Savings Platform
  */
 
 export const ROUTES = {
   marketing: {
     home: "/",
-    marketplace: "/marketplace",
+    marketplace: "/plans", // Redirects marketing directory to plans
+    plans: "/plans",
     forgePrice: "/forge-price",
     privateIndices: "/private-indices",
     about: "/about",
@@ -28,28 +29,15 @@ export const ROUTES = {
   },
   app: {
     dashboard: "/dashboard",
-    stocks: {
-      directory: "/stocks",
-      detail: (symbol: string) => `/stocks/${symbol}`,
-      watchlist: "/stocks/watchlist",
-      portfolio: "/stocks/portfolio",
-      transactions: "/stocks/transactions",
-    },
-    funds: {
-      directory: "/funds",
-      detail: (id: string) => `/funds/${id}`,
-    },
+    plans: "/plans",
+    portfolio: "/portfolio",
     wallet: {
       home: "/wallet",
       withdraw: "/wallet/withdraw",
       transactions: "/wallet/transactions",
     },
-    portfolio: {
-      home: "/portfolio",
-      analytics: "/portfolio/analytics",
-    },
     settings: "/settings",
-    kyc: "/kyc",
     support: "/support",
+    kyc: "/kyc",
   },
 } as const;

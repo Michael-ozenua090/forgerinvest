@@ -5,292 +5,474 @@ import Link from "next/link";
 import { 
   ArrowRight, 
   TrendingUp, 
-  TrendingDown, 
   ShieldCheck, 
-  Activity, 
-  Gavel, 
-  Repeat, 
-  CheckCircle,
-  Building2,
-  LineChart,
-  BadgeCent,
-  Zap,
-  Globe,
-  Rocket
+  Clock, 
+  CheckCircle2, 
+  Lock, 
+  Sparkles,
+  Percent,
+  Wallet,
+  ArrowUpRight,
+  HelpCircle,
+  Coins
 } from "lucide-react";
+import { 
+  CurrencyType, 
+  PlanDurationMonths, 
+  PLAN_CONFIG, 
+  DEFAULT_RATES, 
+  convertFiatToCrypto, 
+  formatCrypto, 
+  formatFiat 
+} from "@/lib/format";
+import { ROUTES } from "@/lib/routes";
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+const PRESET_AMOUNTS = [50, 100, 250, 500, 1000];
 
-const tickerData = [
-  { symbol: "DBX", name: "Databricks", price: 268.50, changePct: +36.7 },
-  { symbol: "STRP", name: "Stripe", price: 72.45, changePct: +0.0 },
-  { symbol: "SHLD", name: "Shield AI", price: 172.04, changePct: +11.9 },
-  { symbol: "SPX", name: "SpaceX", price: 112.30, changePct: +5.4 },
-  { symbol: "EPIC", name: "Epic Games", price: 410.20, changePct: -2.1 },
-  { symbol: "RVOL", name: "Revolut", price: 89.15, changePct: +14.2 },
-  { symbol: "OPAI", name: "OpenAI", price: 310.00, changePct: +42.8 },
-  { symbol: "DCMG", name: "DeepMind", price: 145.60, changePct: -1.2 },
+const MATRIX_ROWS = [
+  { start: 50, m1: 53.00, p1: 3, m2: 57.50, p2: 7.50, m3: 63.50, p3: 13.50, m6: 83.00, p6: 33, m12: 131.00, p12: 81 },
+  { start: 100, m1: 106.00, p1: 6, m2: 115.00, p2: 15, m3: 127.00, p3: 27, m6: 166.00, p6: 66, m12: 262.00, p12: 162 },
+  { start: 250, m1: 265.00, p1: 15, m2: 287.50, p2: 37.50, m3: 317.50, p3: 67.50, m6: 415.00, p6: 165, m12: 655.00, p12: 405 },
+  { start: 500, m1: 530.00, p1: 30, m2: 575.00, p2: 75, m3: 635.00, p3: 135, m6: 830.00, p6: 330, m12: 1310.00, p12: 810 },
+  { start: 1000, m1: 1060.00, p1: 60, m2: 1150.00, p2: 150, m3: 1270.00, p3: 270, m6: 1660.00, p6: 660, m12: 2620.00, p12: 1620 },
 ];
 
-const featuredEquities = [
-  {
-    name: "Databricks",
-    symbol: "DBX",
-    sector: "Enterprise Software",
-    icon: Building2,
-    price: 268.50,
-    changePct: +36.7,
-    valuation: "$43B",
-    liquidity: "High"
-  },
-  {
-    name: "Stripe",
-    symbol: "STRP",
-    sector: "Fintech",
-    icon: BadgeCent,
-    price: 72.45,
-    changePct: 0.0,
-    valuation: "$65B",
-    liquidity: "High"
-  },
-  {
-    name: "SpaceX",
-    symbol: "SPX",
-    sector: "Aerospace",
-    icon: Rocket,
-    price: 112.30,
-    changePct: +5.4,
-    valuation: "$150B",
-    liquidity: "Moderate"
-  },
-  {
-    name: "OpenAI",
-    symbol: "OPAI",
-    sector: "Artificial Intelligence",
-    icon: Zap,
-    price: 310.00,
-    changePct: +42.8,
-    valuation: "$86B",
-    liquidity: "Private Placement"
-  },
-  {
-    name: "Revolut",
-    symbol: "RVOL",
-    sector: "Fintech",
-    icon: Globe,
-    price: 89.15,
-    changePct: +14.2,
-    valuation: "$33B",
-    liquidity: "Moderate"
-  },
-  {
-    name: "Shield AI",
-    symbol: "SHLD",
-    sector: "Defense Tech",
-    icon: ShieldCheck,
-    price: 172.04,
-    changePct: +11.9,
-    valuation: "$2.8B",
-    liquidity: "High"
-  }
-];
+export default function MarketingHomePage() {
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyType>("USD");
+  const [selectedDuration, setSelectedDuration] = useState<PlanDurationMonths>(3);
+  const [capitalUsd, setCapitalUsd] = useState<number>(500);
+  const [customInput, setCustomInput] = useState<string>("500");
 
-const timelineBuy = [
-  { title: "Register & Verify", desc: "Create your Forge account and complete SEC accredited investor verification.", icon: ShieldCheck },
-  { title: "Discover Signals", desc: "Access the Forge Price™ and deep market data for 200+ private unicorns.", icon: Activity },
-  { title: "Submit Bid", desc: "Place a formal IOI (Indication of Interest) or a firm bid for the shares you want.", icon: Gavel },
-  { title: "Execute Order", desc: "Our brokers match your bid with verified sellers and negotiate the block trade.", icon: Repeat },
-  { title: "Settlement", desc: "Funds and shares are securely transferred through our legal and custodial partners.", icon: CheckCircle },
-];
+  const planInfo = PLAN_CONFIG[selectedDuration];
+  const profitUsd = capitalUsd * (planInfo.ratePercent / 100);
+  const payoutUsd = capitalUsd + profitUsd;
 
-const timelineSell = [
-  { title: "Register & Verify", desc: "Create your account and securely connect your equity portal.", icon: ShieldCheck },
-  { title: "Pricing & Demand", desc: "View historical buy-side demand and current pricing signals for your equity.", icon: LineChart },
-  { title: "Submit Ask", desc: "List your shares anonymously or set a firm asking price for our institutional network.", icon: Gavel },
-  { title: "Execute Order", desc: "We match your ask with qualified institutional or high-net-worth buyers.", icon: Repeat },
-  { title: "Settlement", desc: "Cash is transferred directly to your account upon ROFR clearance.", icon: CheckCircle },
-];
+  const capitalInCurr = convertFiatToCrypto(capitalUsd, selectedCurrency, DEFAULT_RATES);
+  const profitInCurr = convertFiatToCrypto(profitUsd, selectedCurrency, DEFAULT_RATES);
+  const payoutInCurr = convertFiatToCrypto(payoutUsd, selectedCurrency, DEFAULT_RATES);
 
-// ─── Sub-Components ────────────────────────────────────────────────────────────
+  const handleAmountSelect = (amt: number) => {
+    setCapitalUsd(amt);
+    setCustomInput(amt.toString());
+  };
 
-function PriceTicker() {
-  // We duplicate the array to allow seamless infinite scrolling
-  const scrollItems = [...tickerData, ...tickerData, ...tickerData];
-  
-  return (
-    <div className="w-full bg-forge-gray-900 border-y border-forge-gray-800 py-3 overflow-hidden flex">
-      <div className="flex animate-marquee whitespace-nowrap min-w-full items-center gap-12 px-6">
-        {scrollItems.map((item, i) => {
-          const isUp = item.changePct >= 0;
-          return (
-            <div key={i} className="flex items-center gap-3">
-              <span className="font-display font-bold text-sm text-white">{item.name}</span>
-              <span className="tabular-nums font-medium text-sm text-forge-gray-400">${item.price.toFixed(2)}</span>
-              <span className={`tabular-nums font-bold text-sm flex items-center gap-0.5 ${isUp ? 'text-market-up' : 'text-market-down'}`}>
-                {isUp ? <TrendingUp size={12} strokeWidth={3} /> : <TrendingDown size={12} strokeWidth={3} />}
-                {isUp ? "+" : ""}{item.changePct}%
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function EquityCard({ equity }: { equity: typeof featuredEquities[0] }) {
-  const isUp = equity.changePct >= 0;
-  
-  let liquidityColor = "bg-forge-gray-100 text-forge-gray-600";
-  if (equity.liquidity === "High") liquidityColor = "bg-market-up/10 text-market-up";
-  if (equity.liquidity === "Moderate") liquidityColor = "bg-forge-orange/10 text-forge-orange";
+  const handleCustomInput = (val: string) => {
+    setCustomInput(val);
+    const num = parseFloat(val);
+    if (!isNaN(num)) {
+      setCapitalUsd(num);
+    }
+  };
 
   return (
-    <Link href={`/stocks/${equity.symbol}`} className="clean-card-hover p-6 flex flex-col h-full block">
-      <div className="flex justify-between items-start mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-forge-gray-50 border border-forge-gray-200 flex items-center justify-center text-forge-orange">
-            <equity.icon size={24} />
-          </div>
-          <div>
-            <h3 className="font-display font-bold text-lg text-forge-gray-900">{equity.name}</h3>
-            <span className="text-xs font-semibold text-forge-gray-600 px-2 py-0.5 rounded-full bg-forge-gray-100 uppercase tracking-wider">
-              {equity.sector}
-            </span>
-          </div>
-        </div>
-        <div className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${liquidityColor}`}>
-          {equity.liquidity}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 mt-auto">
-        <div>
-          <p className="text-xs font-medium text-forge-gray-600 mb-1">Forge Price™</p>
-          <div className="flex items-end gap-2">
-            <span className="tabular-nums font-bold text-xl text-forge-gray-900">${equity.price.toFixed(2)}</span>
-            <span className={`tabular-nums text-xs font-bold flex items-center mb-1 ${isUp ? 'text-market-up' : 'text-market-down'}`}>
-              {isUp ? "+" : ""}{equity.changePct}%
-            </span>
-          </div>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-forge-gray-600 mb-1">Last Valuation</p>
-          <span className="tabular-nums font-bold text-xl text-forge-gray-900">{equity.valuation}</span>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-// ─── Main Page ─────────────────────────────────────────────────────────────────
-
-export default function MarketingPage() {
-  const [activeTab, setActiveTab] = useState<"buy" | "sell">("buy");
-  const timeline = activeTab === "buy" ? timelineBuy : timelineSell;
-
-  return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen bg-forge-gray-50">
       
-      {/* ── 1. Hero Section ────────────────────────────────────────── */}
-      <section className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center">
-        <h1 className="font-display font-extrabold text-5xl sm:text-6xl lg:text-7xl text-forge-gray-900 leading-[1.1] mb-6 tracking-tight">
-          Unicorn Liquidity <br className="hidden sm:block" />
-          <span className="text-gradient-forge">Has Arrived.</span>
-        </h1>
-        
-        <p className="font-body text-lg sm:text-xl text-forge-gray-600 max-w-2xl mx-auto mb-10 font-medium leading-relaxed">
-          Trade private shares and access pre-IPO equity in Databricks, Stripe, SpaceX, and 200+ high-growth companies.
-        </p>
-        
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link href="/marketplace" className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-body font-bold text-white bg-forge-orange hover:bg-forge-orange-hover shadow-[0_8px_24px_rgba(255,90,0,0.25)] transition-all transform hover:-translate-y-0.5">
-            Explore Companies
-            <ArrowRight size={18} strokeWidth={2.5} />
-          </Link>
+      {/* ── Hero Section ────────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden pt-20 pb-24 md:pt-28 md:pb-32 bg-white border-b border-forge-gray-200">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-96 bg-[radial-gradient(circle_at_top_right,rgba(255,90,0,0.12),transparent_50%)]" />
+
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
           
-          <Link href="/register" className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-body font-bold text-forge-gray-900 bg-white border-2 border-forge-gray-200 hover:border-forge-gray-900 hover:bg-forge-gray-50 transition-all">
-            Sell Shares
-          </Link>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-forge-orange-wash border border-forge-orange/20 text-forge-orange text-xs font-bold uppercase tracking-wider mb-8">
+            <Sparkles size={14} /> Fixed-Term Growth & Guaranteed Compound Yield
+          </div>
+
+          <h1 className="font-display font-extrabold text-4xl sm:text-6xl lg:text-7xl text-forge-gray-900 tracking-tight leading-[1.08] max-w-4xl mx-auto uppercase">
+            Turn Small Capital into <span className="text-forge-orange">Significant Wealth</span>
+          </h1>
+
+          <p className="mt-6 text-lg sm:text-xl font-medium text-forge-gray-600 max-w-2xl mx-auto leading-relaxed">
+            Disciplined Capital Growth & Fixed Savings. Lock USD, GBP, BTC, ETH, or SOL and earn guaranteed returns from +6% to +162%.
+          </p>
+
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link 
+              href={ROUTES.auth.register} 
+              className="w-full sm:w-auto px-8 py-4 bg-forge-orange text-white font-bold rounded-xl hover:bg-forge-orange-hover transition-all shadow-[0_4px_14px_rgba(255,90,0,0.25)] flex items-center justify-center gap-2 text-base group"
+            >
+              View Growth Plans
+              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+            
+            <a 
+              href="#calculator" 
+              className="w-full sm:w-auto px-8 py-4 bg-forge-gray-50 border border-forge-gray-200 text-forge-gray-900 font-bold rounded-xl hover:bg-forge-gray-100 transition-colors flex items-center justify-center gap-2 text-base"
+            >
+              Calculate Returns
+            </a>
+          </div>
+
+          {/* Key Stats Bar */}
+          <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto pt-10 border-t border-forge-gray-100 text-left">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-forge-gray-400">Min. Commitment</p>
+              <p className="font-display font-extrabold text-2xl text-forge-gray-900 mt-0.5">$50.00 USD</p>
+              <p className="text-xs text-forge-gray-500 mt-0.5">Accessible to all earners</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-forge-gray-400">Yield Range</p>
+              <p className="font-display font-extrabold text-2xl text-market-up mt-0.5">+6% to +162%</p>
+              <p className="text-xs text-forge-gray-500 mt-0.5">Fixed contracted rates</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-forge-gray-400">Term Horizons</p>
+              <p className="font-display font-extrabold text-2xl text-forge-gray-900 mt-0.5">1 to 12 Mos</p>
+              <p className="text-xs text-forge-gray-500 mt-0.5">Automated maturity lock</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-forge-gray-400">Asset Support</p>
+              <p className="font-display font-extrabold text-2xl text-forge-gray-900 mt-0.5">Fiat & Crypto</p>
+              <p className="text-xs text-forge-gray-500 mt-0.5">USD, GBP, BTC, ETH, SOL</p>
+            </div>
+          </div>
+
         </div>
       </section>
 
-      {/* ── 2. Live Market Ticker ──────────────────────────────────── */}
-      <PriceTicker />
+      {/* ── Interactive Growth Calculator Section ──────────────────────── */}
+      <section id="calculator" className="py-20 md:py-28 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full space-y-12">
+        <div className="text-center max-w-2xl mx-auto">
+          <span className="text-xs font-bold uppercase tracking-wider text-forge-orange">
+            Interactive Calculator
+          </span>
+          <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-forge-gray-900 mt-2">
+            Calculate Your Guaranteed Wealth Growth
+          </h2>
+          <p className="text-forge-gray-600 font-medium mt-3 text-sm sm:text-base">
+            Select a capital tier, duration period, and preferred asset to simulate your compounding return.
+          </p>
 
-      {/* ── 3. Featured Equities Grid ──────────────────────────────── */}
-      <section className="py-24 bg-forge-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-end justify-between mb-12 gap-6">
-            <div>
-              <h2 className="font-display font-extrabold text-3xl text-forge-gray-900 mb-3">Featured Equities</h2>
-              <p className="text-forge-gray-600 font-medium text-lg max-w-xl">
-                Access deep liquidity in the world's most sought-after private companies.
-              </p>
-            </div>
-            <Link href="/stocks" className="flex items-center gap-2 font-bold text-forge-orange hover:text-forge-orange-hover transition-colors">
-              View full marketplace <ArrowRight size={16} strokeWidth={2.5} />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredEquities.map((equity) => (
-              <EquityCard key={equity.symbol} equity={equity} />
+          {/* Currency Switcher */}
+          <div className="mt-6 inline-flex p-1 bg-white border border-forge-gray-200 rounded-xl shadow-sm">
+            {(["USD", "GBP", "BTC", "ETH", "SOL"] as CurrencyType[]).map((c) => (
+              <button
+                key={c}
+                onClick={() => setSelectedCurrency(c)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  selectedCurrency === c
+                    ? "bg-forge-orange text-white shadow-sm"
+                    : "text-forge-gray-600 hover:text-forge-gray-900"
+                }`}
+              >
+                {c}
+              </button>
             ))}
           </div>
         </div>
-      </section>
 
-      {/* ── 4. How It Works (Split Tab) ────────────────────────────── */}
-      <section className="py-24 bg-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="font-display font-extrabold text-3xl md:text-4xl text-forge-gray-900 mb-4">How Forge Works</h2>
-            <p className="text-forge-gray-600 font-medium text-lg">
-              A streamlined, institution-grade execution process from discovery to settlement.
-            </p>
-          </div>
+        {/* Calculator Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Controls (7 Cols) */}
+          <div className="lg:col-span-7 clean-card bg-white p-6 sm:p-8 rounded-2xl border border-forge-gray-200 shadow-sm space-y-8">
+            {/* 1. Duration */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-forge-gray-500 mb-3">
+                1. Select Growth Horizon
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {(Object.values(PLAN_CONFIG) as (typeof PLAN_CONFIG)[PlanDurationMonths][]).map((p) => {
+                  const active = selectedDuration === p.months;
+                  return (
+                    <button
+                      key={p.months}
+                      onClick={() => setSelectedDuration(p.months)}
+                      className={`p-4 rounded-xl text-left border-2 transition-all ${
+                        active
+                          ? "border-forge-orange bg-forge-orange-wash shadow-sm"
+                          : "border-forge-gray-200 hover:border-forge-gray-300"
+                      }`}
+                    >
+                      <span className="block font-bold text-sm text-forge-gray-900">{p.label}</span>
+                      <span className="font-display font-extrabold text-2xl text-forge-orange mt-2 block">
+                        +{p.ratePercent}%
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-          {/* Tabs */}
-          <div className="flex p-1 bg-forge-gray-100 rounded-xl max-w-sm mx-auto mb-16">
-            <button 
-              onClick={() => setActiveTab("buy")}
-              className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'buy' ? 'bg-white text-forge-orange shadow-sm' : 'text-forge-gray-500 hover:text-forge-gray-900'}`}
-            >
-              Buy Shares
-            </button>
-            <button 
-              onClick={() => setActiveTab("sell")}
-              className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'sell' ? 'bg-white text-forge-orange shadow-sm' : 'text-forge-gray-500 hover:text-forge-gray-900'}`}
-            >
-              Sell Shares
-            </button>
-          </div>
+            {/* 2. Capital Presets & Input */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-xs font-bold uppercase tracking-wider text-forge-gray-500">
+                  2. Select Starting Capital (USD Base)
+                </label>
+                <span className="text-xs font-medium text-forge-gray-400">Min $50.00</span>
+              </div>
 
-          {/* Vertical Timeline */}
-          <div className="relative">
-            {/* Connecting Line */}
-            <div className="absolute left-[27px] top-4 bottom-4 w-0.5 bg-forge-gray-200" />
-            
-            <div className="space-y-12">
-              {timeline.map((step, idx) => (
-                <div key={idx} className="relative flex gap-8 group">
-                  <div className="relative z-10 w-14 h-14 rounded-2xl bg-white border-2 border-forge-gray-200 flex items-center justify-center text-forge-gray-400 group-hover:border-forge-orange group-hover:text-forge-orange group-hover:shadow-[0_0_20px_rgba(255,90,0,0.15)] transition-all shrink-0">
-                    <step.icon size={24} />
-                  </div>
-                  <div className="pt-2">
-                    <h4 className="font-display font-bold text-xl text-forge-gray-900 mb-2">
-                      {idx + 1}. {step.title}
-                    </h4>
-                    <p className="text-forge-gray-600 leading-relaxed font-medium">
-                      {step.desc}
-                    </p>
-                  </div>
-                </div>
-              ))}
+              <div className="grid grid-cols-5 gap-2 mb-4">
+                {PRESET_AMOUNTS.map((amt) => (
+                  <button
+                    key={amt}
+                    onClick={() => handleAmountSelect(amt)}
+                    className={`py-3 px-2 rounded-lg font-bold text-sm text-center border transition-all ${
+                      capitalUsd === amt
+                        ? "bg-forge-gray-900 text-white border-forge-gray-900 shadow-sm"
+                        : "bg-white text-forge-gray-700 border-forge-gray-200 hover:border-forge-orange"
+                    }`}
+                  >
+                    ${amt}
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-4 flex items-center font-bold text-forge-gray-500 text-lg">
+                  $
+                </span>
+                <input
+                  type="number"
+                  min="50"
+                  step="10"
+                  value={customInput}
+                  onChange={(e) => handleCustomInput(e.target.value)}
+                  placeholder="Custom Capital (Min $50)"
+                  className="w-full bg-forge-gray-50 border border-forge-gray-200 rounded-xl pl-9 pr-24 py-4 text-xl font-bold font-display text-forge-gray-900 focus:outline-none focus:ring-2 focus:ring-forge-orange focus:bg-white transition-all"
+                />
+                <span className="absolute inset-y-0 right-0 pr-4 flex items-center text-xs font-bold text-forge-gray-400 uppercase tracking-wider">
+                  USD
+                </span>
+              </div>
             </div>
           </div>
 
+          {/* Result Card (5 Cols) */}
+          <div className="lg:col-span-5 clean-card bg-white p-6 sm:p-8 rounded-2xl border border-forge-gray-200 shadow-lg space-y-6">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-forge-orange">
+                Simulated Projection
+              </span>
+              <h3 className="font-display font-extrabold text-2xl text-forge-gray-900 mt-1">
+                {planInfo.label} Growth Plan
+              </h3>
+            </div>
+
+            <div className="space-y-4 py-4 border-y border-forge-gray-100 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-forge-gray-600 font-medium">Starting Principal</span>
+                <span className="font-bold text-forge-gray-900 tabular-nums">
+                  {formatCrypto(capitalInCurr, selectedCurrency)} ({formatFiat(capitalUsd)})
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-forge-gray-600 font-medium">Contract Rate</span>
+                <span className="font-bold text-market-up tabular-nums">
+                  +{planInfo.ratePercent}%
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-forge-gray-600 font-medium">Accrued Net Profit</span>
+                <span className="font-bold text-market-up tabular-nums">
+                  +{formatCrypto(profitInCurr, selectedCurrency)} (+{formatFiat(profitUsd)})
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-forge-orange-wash rounded-xl p-5 border border-forge-orange/20 text-center">
+              <span className="block text-xs font-bold uppercase tracking-wider text-forge-gray-600 mb-1">
+                Total Maturity Payout
+              </span>
+              <div className="font-display font-extrabold text-3xl sm:text-4xl text-forge-orange tabular-nums">
+                {formatCrypto(payoutInCurr, selectedCurrency)}
+              </div>
+              <p className="text-xs font-medium text-forge-gray-600 mt-1">
+                ≈ {formatFiat(payoutUsd)} returned in full upon duration completion
+              </p>
+            </div>
+
+            <Link
+              href={ROUTES.auth.register}
+              className="w-full py-4 bg-forge-orange text-white font-bold rounded-xl hover:bg-forge-orange-hover transition-colors shadow-[0_4px_14px_rgba(255,90,0,0.25)] flex items-center justify-center gap-2 text-base"
+            >
+              Start This Plan Now
+              <ArrowRight size={18} />
+            </Link>
+
+            <div className="flex items-center justify-center gap-1.5 text-xs font-medium text-forge-gray-500">
+              <Lock size={12} className="text-market-up" />
+              Guaranteed capital & payout disbursement
+            </div>
+          </div>
+
+        </div>
+
+        {/* ── Flyer Return Matrix Reference Table ── */}
+        <div className="clean-card bg-white p-6 sm:p-8 rounded-2xl border border-forge-gray-200 shadow-sm mt-12">
+          <div className="mb-6">
+            <span className="text-xs font-bold uppercase tracking-wider text-forge-orange">
+              Official Reference Table
+            </span>
+            <h3 className="font-display font-extrabold text-2xl text-forge-gray-900 mt-1">
+              Standard Return Matrix
+            </h3>
+            <p className="text-sm font-medium text-forge-gray-600 mt-1">
+              Guaranteed payouts and profit accrual across all preset capital tiers.
+            </p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-forge-gray-200 text-xs font-bold uppercase tracking-wider text-forge-gray-500 bg-forge-gray-50/50">
+                  <th className="py-4 px-4">Starting Capital</th>
+                  <th className="py-4 px-4">1 Month (+6%)</th>
+                  <th className="py-4 px-4">2 Months (+15%)</th>
+                  <th className="py-4 px-4">3 Months (+27%)</th>
+                  <th className="py-4 px-4">6 Months (+66%)</th>
+                  <th className="py-4 px-4">12 Months (+162%)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-forge-gray-100 font-medium">
+                {MATRIX_ROWS.map((row) => (
+                  <tr key={row.start} className="hover:bg-forge-gray-50/50 transition-colors">
+                    <td className="py-4 px-4 font-bold text-forge-gray-900 tabular-nums">
+                      ${row.start.toLocaleString()}
+                    </td>
+                    <td className="py-4 px-4 tabular-nums">
+                      <span className="font-bold text-forge-gray-900">${row.m1.toFixed(2)}</span>{" "}
+                      <span className="text-xs text-market-up font-bold">(+${row.p1})</span>
+                    </td>
+                    <td className="py-4 px-4 tabular-nums">
+                      <span className="font-bold text-forge-gray-900">${row.m2.toFixed(2)}</span>{" "}
+                      <span className="text-xs text-market-up font-bold">(+${row.p2})</span>
+                    </td>
+                    <td className="py-4 px-4 tabular-nums">
+                      <span className="font-bold text-forge-gray-900">${row.m3.toFixed(2)}</span>{" "}
+                      <span className="text-xs text-market-up font-bold">(+${row.p3})</span>
+                    </td>
+                    <td className="py-4 px-4 tabular-nums">
+                      <span className="font-bold text-forge-gray-900">${row.m6.toFixed(2)}</span>{" "}
+                      <span className="text-xs text-market-up font-bold">(+${row.p6})</span>
+                    </td>
+                    <td className="py-4 px-4 tabular-nums">
+                      <span className="font-bold text-forge-gray-900">${row.m12.toFixed(2)}</span>{" "}
+                      <span className="text-xs text-market-up font-bold">(+${row.p12})</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      {/* ── Strategy Overview & Capital Protection Cards ───────────────── */}
+      <section className="py-16 bg-white border-y border-forge-gray-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            {/* Card 1: Strategy Overview */}
+            <div className="clean-card bg-forge-gray-50 p-8 rounded-2xl border border-forge-gray-200 space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-forge-orange text-white flex items-center justify-center shadow-[0_4px_14px_rgba(255,90,0,0.25)]">
+                <TrendingUp size={28} />
+              </div>
+              <h3 className="font-display font-bold text-2xl text-forge-gray-900">
+                Strategy Overview
+              </h3>
+              <p className="text-sm font-medium text-forge-gray-600 leading-relaxed">
+                High probability capital allocation, automated liquidity, strict compounding. We deploy disciplined quantitative frameworks designed to insulate principal while generating continuous, predictable yields.
+              </p>
+              <ul className="space-y-2 pt-2 text-xs font-semibold text-forge-gray-700">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-market-up shrink-0" />
+                  Algorithmic liquidity allocation across collateralized pools
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-market-up shrink-0" />
+                  Strict compounding math verified prior to contract activation
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-market-up shrink-0" />
+                  Predictable payout schedules with zero market volatility exposure
+                </li>
+              </ul>
+            </div>
+
+            {/* Card 2: Capital Protection */}
+            <div className="clean-card bg-forge-gray-50 p-8 rounded-2xl border border-forge-gray-200 space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-market-up text-white flex items-center justify-center shadow-sm">
+                <ShieldCheck size={28} />
+              </div>
+              <h3 className="font-display font-bold text-2xl text-forge-gray-900">
+                Capital Protection
+              </h3>
+              <p className="text-sm font-medium text-forge-gray-600 leading-relaxed">
+                Capital preservation priority, automated maturity lock, zero hidden maintenance fees. Every dollar or cryptocurrency committed is held under non-speculative reserve backing.
+              </p>
+              <ul className="space-y-2 pt-2 text-xs font-semibold text-forge-gray-700">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-market-up shrink-0" />
+                  100% principal preservation priority enforced by system protocol
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-market-up shrink-0" />
+                  Zero account maintenance, custody, or platform deduction fees
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-market-up shrink-0" />
+                  Transparent disbursement with immediate withdrawal upon maturity
+                </li>
+              </ul>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ── How It Works ────────────────────────────────────────────────── */}
+      <section className="py-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+        <div className="text-center max-w-xl mx-auto mb-14">
+          <span className="text-xs font-bold uppercase tracking-wider text-forge-orange">
+            Simple 4-Step Process
+          </span>
+          <h2 className="font-display font-extrabold text-3xl text-forge-gray-900 mt-2">
+            How Forge Capital Works
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { step: "01", title: "Deposit Capital", desc: "Add USD, GBP, BTC, ETH, or SOL with as little as $50 starting funds.", icon: Wallet },
+            { step: "02", title: "Select Growth Plan", desc: "Choose a duration from 1 to 12 months with fixed returns up to +162%.", icon: Clock },
+            { step: "03", title: "Accrue Interest", desc: "Your capital compounds automatically with guaranteed contractual yields.", icon: TrendingUp },
+            { step: "04", title: "Withdraw Matured Funds", desc: "Disburse your principal plus interest directly to your external account.", icon: ArrowUpRight },
+          ].map((item) => (
+            <div key={item.step} className="clean-card bg-white p-6 rounded-2xl border border-forge-gray-200 space-y-3">
+              <span className="font-display font-extrabold text-3xl text-forge-orange/30">
+                {item.step}
+              </span>
+              <h4 className="font-bold text-lg text-forge-gray-900">{item.title}</h4>
+              <p className="text-xs font-medium text-forge-gray-600 leading-relaxed">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Bottom Call To Action ───────────────────────────────────────── */}
+      <section className="py-20 bg-forge-gray-900 text-white border-t border-forge-gray-800 relative overflow-hidden">
+        <div className="pointer-events-none absolute right-0 bottom-0 w-96 h-96 bg-forge-orange/15 rounded-full blur-3xl" />
+        
+        <div className="max-w-4xl mx-auto px-4 text-center relative z-10 space-y-6">
+          <h2 className="font-display font-extrabold text-3xl sm:text-5xl tracking-tight">
+            Ready to Begin Your Wealth Accumulation Journey?
+          </h2>
+          <p className="text-forge-gray-300 text-base sm:text-lg max-w-2xl mx-auto">
+            Open your Forge Capital account today with as little as $50.00 and lock in guaranteed compounding returns.
+          </p>
+          <div className="pt-4 flex justify-center">
+            <Link
+              href={ROUTES.auth.register}
+              className="px-10 py-4 bg-forge-orange text-white font-bold rounded-xl hover:bg-forge-orange-hover transition-colors shadow-[0_4px_14px_rgba(255,90,0,0.25)] text-base inline-flex items-center gap-2"
+            >
+              Get Started Now
+              <ArrowRight size={18} />
+            </Link>
+          </div>
         </div>
       </section>
 

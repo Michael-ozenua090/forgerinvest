@@ -21,6 +21,14 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "cryptologos.cc" },
     ],
   },
+  async redirects() {
+    return [
+      { source: "/stocks", destination: "/plans", permanent: true },
+      { source: "/stocks/:path*", destination: "/plans", permanent: true },
+      { source: "/funds", destination: "/plans", permanent: true },
+      { source: "/funds/:path*", destination: "/plans", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

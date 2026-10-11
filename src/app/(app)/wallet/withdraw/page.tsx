@@ -3,17 +3,20 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Landmark, Lock, ArrowLeft, ArrowUpFromLine, Wallet } from "lucide-react";
+import { Lock, ArrowLeft, ArrowUpFromLine, Wallet, ShieldAlert } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { formatCrypto } from "@/lib/format";
+import { KycGateModal } from "@/components/KycGateModal";
 
 export default function WithdrawPage() {
   const router = useRouter();
-  const { cryptoBalances, activeCurrency, withdrawFunds } = useStore();
+  const { cryptoBalances, activeCurrency, withdrawFunds, isKycCompleted } = useStore();
   const availableCrypto = cryptoBalances[activeCurrency] ?? 0;
+  
   const [step, setStep] = useState<1 | 2>(1);
   const [withdrawAmount, setWithdrawAmount] = useState<string>("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [showKycGate, setShowKycGate] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // 2FA Auto-focus logic
@@ -25,13 +28,29 @@ export default function WithdrawPage() {
     setOtp(newOtp);
     if (value !== "" && index < 5) inputRefs.current[index + 1]?.focus();
   };
+
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Backspace" && otp[index] === "" && index > 0) inputRefs.current[index - 1]?.focus();
   };
 
+  const handleContinue = () => {
+    // Intentional KYC friction gate: Check verification before allowing withdrawal
+    if (!isKycCompleted) {
+      setShowKycGate(true);
+      return;
+    }
+    setStep(2);
+  };
+
   const handleWithdraw = () => {
-    withdrawFunds(activeCurrency, parseFloat(withdrawAmount));
-    router.push("/wallet/transactions");
+    const result = withdrawFunds(activeCurrency, parseFloat(withdrawAmount));
+    if (result.requiresKyc) {
+      setShowKycGate(true);
+      return;
+    }
+    if (result.success) {
+      router.push("/wallet/transactions");
+    }
   };
 
   return (
@@ -43,10 +62,10 @@ export default function WithdrawPage() {
         </Link>
         <h1 className="font-display font-extrabold text-3xl text-forge-gray-900 flex items-center gap-3">
           <ArrowUpFromLine size={28} className="text-forge-orange" />
-          Withdraw Crypto
+          Withdraw Capital & Profits
         </h1>
         <p className="font-medium text-forge-gray-600 mt-1">
-          Transfer digital assets from your Forge wallet to your connected external wallet.
+          Transfer your liquid capital or matured growth payouts to your connected external wallet.
         </p>
       </div>
 
@@ -78,25 +97,25 @@ export default function WithdrawPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-forge-gray-600 mb-2">Destination Wallet</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-forge-gray-600 mb-2">Destination Account</label>
               <div className="p-5 border border-forge-gray-200 bg-forge-gray-50/50 rounded-xl flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-white border border-forge-gray-200 rounded-lg flex items-center justify-center text-forge-gray-600 shadow-sm">
                     <Wallet size={24} />
                   </div>
                   <div>
-                    <p className="font-bold text-forge-gray-900">MetaMask</p>
+                    <p className="font-bold text-forge-gray-900">Connected Wallet</p>
                     <p className="text-xs font-bold text-forge-gray-500 uppercase tracking-wider mt-0.5">0x71C8...9A64</p>
                   </div>
                 </div>
-                <span className="text-xs font-bold text-market-up bg-market-up/10 px-2 py-1 rounded">Verified</span>
+                <span className="text-xs font-bold text-market-up bg-market-up/10 px-2.5 py-1 rounded-full">Primary</span>
               </div>
             </div>
 
             <button 
               disabled={!withdrawAmount || parseFloat(withdrawAmount) <= 0 || parseFloat(withdrawAmount) > availableCrypto}
-              onClick={() => setStep(2)}
-              className="w-full py-4 bg-forge-gray-900 text-white font-bold rounded-lg hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+              onClick={handleContinue}
+              className="w-full py-4 bg-forge-orange text-white font-bold rounded-xl hover:bg-forge-orange-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_14px_rgba(255,90,0,0.25)]"
             >
               Continue to Verification
             </button>
@@ -145,6 +164,12 @@ export default function WithdrawPage() {
           </div>
         )}
       </div>
+
+      {/* Intentional KYC Friction Gate Modal */}
+      <KycGateModal 
+        isOpen={showKycGate} 
+        onClose={() => setShowKycGate(false)} 
+      />
 
     </div>
   );
