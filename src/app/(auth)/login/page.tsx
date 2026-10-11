@@ -7,7 +7,7 @@ import { Eye, Lock } from "lucide-react";
 export default function LoginPage() {
   const router = useRouter();
   return (
-    <div className="clean-card p-8 sm:p-10 w-full shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+    <div className="clean-card p-8 sm:p-10 w-full max-w-lg mx-auto shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-forge-gray-50 border border-forge-gray-200 mb-4 text-forge-orange">
           <Lock size={24} />

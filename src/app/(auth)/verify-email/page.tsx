@@ -52,7 +52,7 @@ export default function VerifyEmailPage() {
   };
 
   return (
-    <div className="clean-card p-8 sm:p-10 w-full shadow-[0_8px_30px_rgba(0,0,0,0.04)] text-center">
+    <div className="clean-card p-8 sm:p-10 w-full max-w-lg mx-auto shadow-[0_8px_30px_rgba(0,0,0,0.04)] text-center">
       <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-forge-orange-wash text-forge-orange mb-6">
         <Mail size={32} strokeWidth={2} />
       </div>

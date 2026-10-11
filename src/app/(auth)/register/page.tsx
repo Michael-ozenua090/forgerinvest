@@ -33,7 +33,7 @@ export default function RegisterPage() {
   ];
 
   return (
-    <div className="clean-card p-8 sm:p-10 w-full shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+    <div className="clean-card p-8 sm:p-10 w-full max-w-lg mx-auto shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
       <div className="text-center mb-8">
         <h1 className="font-display font-extrabold text-2xl text-forge-gray-900">
           Create your account

@@ -33,7 +33,7 @@ export default function AuthLayout({
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col justify-center items-center px-4 py-12 relative z-10">
-        <div className="w-full max-w-lg">
+        <div className="w-full max-w-4xl">
           {children}
           
           <div className="mt-8 text-center flex items-center justify-center gap-2 text-xs font-medium text-forge-gray-500">
