@@ -36,10 +36,10 @@ export default function PressPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Announcements</h2>
             {releases.map((release, idx) => (
               <article key={idx} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                <span className="text-sm font-semibold text-blue-600 mb-2 block">{release.date}</span>
+                <span className="text-sm font-semibold text-forge-orange mb-2 block">{release.date}</span>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">{release.title}</h3>
                 <p className="text-gray-600 mb-4">{release.excerpt}</p>
-                <a href="#" className="inline-flex items-center text-blue-600 font-medium hover:text-blue-800 transition">
+                <a href="#" className="inline-flex items-center text-forge-orange font-medium hover:text-forge-orange-hover transition">
                   Read full release <ArrowRight className="ml-1 w-4 h-4" />
                 </a>
               </article>
@@ -48,14 +48,14 @@ export default function PressPage() {
 
           <div className="space-y-8">
             <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 text-center">
-              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Download className="w-8 h-8 text-blue-600" />
+              <div className="w-16 h-16 bg-forge-orange/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Download className="w-8 h-8 text-forge-orange" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Media Kit</h3>
               <p className="text-gray-600 text-sm mb-6">
                 Download our official logos, executive headshots, and brand guidelines.
               </p>
-              <button className="w-full bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 transition font-medium flex items-center justify-center gap-2">
+              <button className="w-full bg-forge-orange text-white px-4 py-2.5 rounded-lg hover:bg-forge-orange-hover transition font-medium flex items-center justify-center gap-2 shadow-sm">
                 <FileText className="w-4 h-4" /> Download Assets
               </button>
             </div>

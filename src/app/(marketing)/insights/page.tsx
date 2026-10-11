@@ -19,8 +19,8 @@ export default function InsightsPage() {
     {
       title: "The Tech IPO Pipeline",
       category: "Quarterly Outlook",
-      icon: <LineChart className="w-6 h-6 text-blue-600" />,
-      bg: "bg-blue-50",
+      icon: <LineChart className="w-6 h-6 text-forge-orange" />,
+      bg: "bg-forge-orange/10",
       description: "A comprehensive look at the late-stage companies most likely to enter the public markets over the next 18 months."
     }
   ];
@@ -29,8 +29,8 @@ export default function InsightsPage() {
     <div className="min-h-screen bg-gray-50 py-20 px-6 sm:px-12">
       <div className="max-w-6xl mx-auto">
         <header className="text-center mb-16">
-          <div className="inline-flex items-center justify-center p-3 bg-blue-100 rounded-full mb-4">
-            <BookOpen className="w-8 h-8 text-blue-700" />
+          <div className="inline-flex items-center justify-center p-3 bg-forge-orange/10 rounded-full mb-4">
+            <BookOpen className="w-8 h-8 text-forge-orange" />
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6 tracking-tight">
             Private Market Insights
@@ -43,7 +43,7 @@ export default function InsightsPage() {
         <section>
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold text-gray-900">Featured Reports</h2>
-            <button className="text-blue-600 font-medium hover:text-blue-800 transition">View all reports</button>
+            <button className="text-forge-orange font-medium hover:text-forge-orange-hover transition">View all reports</button>
           </div>
           
           <div className="grid md:grid-cols-3 gap-8">
@@ -56,9 +56,9 @@ export default function InsightsPage() {
                 </div>
                 <div className="p-6 flex-1 flex flex-col">
                   <span className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 block">{report.category}</span>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">{report.title}</h3>
+                  <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-forge-orange transition-colors">{report.title}</h3>
                   <p className="text-gray-600 text-sm flex-1 mb-6">{report.description}</p>
-                  <div className="mt-auto flex items-center text-sm font-semibold text-blue-600 group-hover:gap-2 transition-all">
+                  <div className="mt-auto flex items-center text-sm font-semibold text-forge-orange group-hover:gap-2 transition-all">
                     Read Report <ArrowRight className="ml-1 w-4 h-4" />
                   </div>
                 </div>
@@ -76,10 +76,10 @@ export default function InsightsPage() {
             <input 
               type="email" 
               placeholder="Enter your email address" 
-              className="flex-1 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+              className="flex-1 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-forge-orange text-gray-900"
               required 
             />
-            <button type="submit" className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-medium whitespace-nowrap">
+            <button type="submit" className="bg-forge-orange text-white px-6 py-3 rounded-lg hover:bg-forge-orange-hover transition font-medium whitespace-nowrap shadow-sm">
               Subscribe
             </button>
           </form>

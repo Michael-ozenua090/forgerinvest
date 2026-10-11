@@ -5,22 +5,22 @@ export default function CareersPage() {
     {
       title: "Competitive Compensation",
       description: "Top-tier base salaries and performance bonuses.",
-      icon: <DollarSign className="w-6 h-6 text-blue-600" />
+      icon: <DollarSign className="w-6 h-6 text-forge-orange" />
     },
     {
       title: "Pre-IPO Equity Packages",
       description: "Own a piece of the infrastructure you're building.",
-      icon: <Briefcase className="w-6 h-6 text-blue-600" />
+      icon: <Briefcase className="w-6 h-6 text-forge-orange" />
     },
     {
       title: "Comprehensive Healthcare",
       description: "Medical, dental, and vision coverage for you and your dependents.",
-      icon: <Heart className="w-6 h-6 text-blue-600" />
+      icon: <Heart className="w-6 h-6 text-forge-orange" />
     },
     {
       title: "Flexible Work",
       description: "Remote-first options and flexible hours.",
-      icon: <Map className="w-6 h-6 text-blue-600" />
+      icon: <Map className="w-6 h-6 text-forge-orange" />
     }
   ];
 
@@ -47,7 +47,7 @@ export default function CareersPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {perks.map((perk, idx) => (
               <div key={idx} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-start">
-                <div className="mb-4 bg-blue-50 p-3 rounded-lg">
+                <div className="mb-4 bg-forge-orange/10 p-3 rounded-lg">
                   {perk.icon}
                 </div>
                 <h3 className="text-xl font-semibold mb-2">{perk.title}</h3>
@@ -70,7 +70,7 @@ export default function CareersPage() {
                     <span>{pos.location}</span>
                   </div>
                 </div>
-                <button className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 transition font-medium">
+                <button className="flex items-center gap-2 bg-forge-orange text-white px-5 py-2.5 rounded-lg hover:bg-forge-orange-hover transition font-medium shadow-sm">
                   Apply <ArrowRight className="w-4 h-4" />
                 </button>
               </div>

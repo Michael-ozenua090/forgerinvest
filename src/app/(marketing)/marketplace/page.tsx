@@ -30,22 +30,22 @@ export default function MarketplacePage() {
             <div className="flex justify-between items-end mb-2">
               <div>
                 <p className="text-sm text-gray-500">Forge Price™</p>
-                <p className="text-xl font-bold">{stock.forgePrice}</p>
+                <p className="text-xl font-bold tabular-nums">{stock.forgePrice}</p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-500">Implied Valuation</p>
-                <p className="text-lg font-medium">{stock.valuation}</p>
+                <p className="text-lg font-medium tabular-nums">{stock.valuation}</p>
               </div>
             </div>
             
             {/* Overlay prompt on hover */}
-            <div className="absolute inset-0 bg-white/95 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-center p-6 transition-opacity rounded-xl border-2 border-blue-500 z-10">
+            <div className="absolute inset-0 bg-white/95 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-center p-6 transition-opacity rounded-xl border-2 border-forge-orange z-10">
               <p className="text-lg font-medium mb-4">Sign In or Register to Access Live Order Books & Execute Trades</p>
               <div className="flex gap-3">
-                <Link href="/login" className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+                <Link href="/login" className="px-4 py-2 bg-forge-orange text-white font-medium rounded-lg hover:bg-forge-orange-hover transition shadow-sm">
                   Sign In
                 </Link>
-                <Link href="/register" className="px-4 py-2 bg-gray-100 text-blue-600 font-medium rounded-lg hover:bg-gray-200 transition">
+                <Link href="/register" className="px-4 py-2 bg-gray-100 text-forge-orange font-medium rounded-lg hover:bg-gray-200 transition">
                   Register
                 </Link>
               </div>

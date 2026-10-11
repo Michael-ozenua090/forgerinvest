@@ -10,7 +10,9 @@ interface CryptoDepositModalProps {
   onClose: () => void;
 }
 
-const NETWORKS: Record<CurrencyType, { name: string; tag: string; icon: string; address: string; testCredit: number }> = {
+type CryptoCurrency = 'BTC' | 'ETH' | 'SOL';
+
+const NETWORKS: Record<CryptoCurrency, { name: string; tag: string; icon: string; address: string; testCredit: number }> = {
   BTC: {
     name: "Bitcoin",
     tag: "BTC Native SegWit",
@@ -36,10 +38,10 @@ const NETWORKS: Record<CurrencyType, { name: string; tag: string; icon: string; 
 
 export function CryptoDepositModal({ isOpen, onClose }: CryptoDepositModalProps) {
   const { activeCurrency, depositFunds, setToast } = useStore();
-  const initialCrypto: CurrencyType = (['BTC', 'ETH', 'SOL'] as CurrencyType[]).includes(activeCurrency) 
-    ? activeCurrency 
+  const initialCrypto: CryptoCurrency = (['BTC', 'ETH', 'SOL'] as const).includes(activeCurrency as CryptoCurrency) 
+    ? (activeCurrency as CryptoCurrency) 
     : 'BTC';
-  const [tab, setTab] = useState<CurrencyType>(initialCrypto);
+  const [tab, setTab] = useState<CryptoCurrency>(initialCrypto);
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
@@ -71,7 +73,7 @@ export function CryptoDepositModal({ isOpen, onClose }: CryptoDepositModalProps)
         <div className="p-6">
           {/* Coin Selector Tabs */}
           <div className="flex bg-forge-gray-50 rounded-lg p-1 mb-6">
-            {(['BTC', 'ETH', 'SOL'] as CurrencyType[]).map(c => (
+            {(['BTC', 'ETH', 'SOL'] as CryptoCurrency[]).map(c => (
               <button
                 key={c}
                 onClick={() => setTab(c)}

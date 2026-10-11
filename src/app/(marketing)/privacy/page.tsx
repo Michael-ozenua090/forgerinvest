@@ -7,7 +7,7 @@ export default function PrivacyPolicyPage() {
         Privacy Policy
       </h1>
       
-      <div className="prose prose-blue max-w-none text-gray-600">
+      <div className="prose max-w-none text-gray-600">
         <p className="text-sm mb-8">Last Updated: October 9, 2026</p>
 
         <h2 className="text-2xl font-semibold text-gray-900 mt-8 mb-4">1. Information We Collect</h2>

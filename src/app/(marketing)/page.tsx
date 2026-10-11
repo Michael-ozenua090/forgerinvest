@@ -204,12 +204,12 @@ export default function MarketingPage() {
         </p>
         
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link href="/stocks" className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-body font-bold text-white bg-forge-orange hover:bg-forge-orange-hover shadow-[0_8px_24px_rgba(255,90,0,0.25)] transition-all transform hover:-translate-y-0.5">
+          <Link href="/marketplace" className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-body font-bold text-white bg-forge-orange hover:bg-forge-orange-hover shadow-[0_8px_24px_rgba(255,90,0,0.25)] transition-all transform hover:-translate-y-0.5">
             Explore Companies
             <ArrowRight size={18} strokeWidth={2.5} />
           </Link>
           
-          <Link href="/stocks" className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-body font-bold text-forge-gray-900 bg-white border-2 border-forge-gray-200 hover:border-forge-gray-900 hover:bg-forge-gray-50 transition-all">
+          <Link href="/register" className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-body font-bold text-forge-gray-900 bg-white border-2 border-forge-gray-200 hover:border-forge-gray-900 hover:bg-forge-gray-50 transition-all">
             Sell Shares
           </Link>
         </div>

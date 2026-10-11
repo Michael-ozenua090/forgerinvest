@@ -23,22 +23,22 @@ export default function ContactPage() {
             <div className="grid sm:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" />
+                <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-forge-orange focus:border-forge-orange outline-none transition" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" />
+                <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-forge-orange focus:border-forge-orange outline-none transition" />
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-              <input type="email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" />
+              <input type="email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-forge-orange focus:border-forge-orange outline-none transition" />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-              <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition bg-white">
+              <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-forge-orange focus:border-forge-orange outline-none transition bg-white">
                 <option>Institutional Trading</option>
                 <option>Shareholder Liquidity</option>
                 <option>Press & Media</option>
@@ -48,10 +48,10 @@ export default function ContactPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
-              <textarea rows={4} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none"></textarea>
+              <textarea rows={4} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-forge-orange focus:border-forge-orange outline-none transition resize-none"></textarea>
             </div>
 
-            <button type="button" className="w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition">
+            <button type="button" className="w-full bg-forge-orange text-white font-medium py-3 rounded-lg hover:bg-forge-orange-hover transition shadow-sm">
               Send Message
             </button>
           </form>
@@ -63,9 +63,9 @@ export default function ContactPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Our Offices</h2>
             <div className="grid sm:grid-cols-2 gap-6">
               {offices.map((office, idx) => (
-                <div key={idx} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:border-blue-100 transition-colors">
+                <div key={idx} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:border-forge-orange/30 transition-colors">
                   <div className="flex items-center gap-2 mb-2">
-                    <MapPin className="w-5 h-5 text-blue-600" />
+                    <MapPin className="w-5 h-5 text-forge-orange" />
                     <h3 className="text-lg font-bold text-gray-900">{office.city}</h3>
                   </div>
                   <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-3">{office.type}</span>
@@ -79,19 +79,19 @@ export default function ContactPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Direct Inquiries</h2>
             <div className="bg-gray-900 text-white p-8 rounded-xl space-y-6">
               <div className="flex items-start gap-4">
-                <div className="bg-gray-800 p-3 rounded-lg"><Phone className="w-6 h-6 text-blue-400" /></div>
+                <div className="bg-gray-800 p-3 rounded-lg"><Phone className="w-6 h-6 text-forge-orange" /></div>
                 <div>
                   <h4 className="font-bold mb-1">Phone Support</h4>
                   <p className="text-gray-400 text-sm mb-2">Available Mon-Fri, 9am - 6pm EST</p>
-                  <a href="tel:+18005550199" className="text-blue-400 font-medium hover:text-blue-300">+1 (800) 555-0199</a>
+                  <a href="tel:+18005550199" className="text-forge-orange font-medium hover:text-forge-orange-hover">+1 (800) 555-0199</a>
                 </div>
               </div>
               <div className="flex items-start gap-4">
-                <div className="bg-gray-800 p-3 rounded-lg"><Mail className="w-6 h-6 text-blue-400" /></div>
+                <div className="bg-gray-800 p-3 rounded-lg"><Mail className="w-6 h-6 text-forge-orange" /></div>
                 <div>
                   <h4 className="font-bold mb-1">Email Support</h4>
                   <p className="text-gray-400 text-sm mb-2">General inquiries and support</p>
-                  <a href="mailto:support@forgeinvest.example.com" className="text-blue-400 font-medium hover:text-blue-300">support@forge.example.com</a>
+                  <a href="mailto:support@forgeinvest.example.com" className="text-forge-orange font-medium hover:text-forge-orange-hover">support@forge.example.com</a>
                 </div>
               </div>
             </div>

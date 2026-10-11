@@ -7,7 +7,7 @@ export default function FormCRSPage() {
         Customer Relationship Summary (Form CRS)
       </h1>
       
-      <div className="prose prose-blue max-w-none text-gray-600">
+      <div className="prose max-w-none text-gray-600">
         <p className="text-sm mb-8">Date: October 9, 2026</p>
 
         <p className="font-medium text-gray-900 mb-6">

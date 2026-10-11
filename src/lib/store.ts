@@ -105,7 +105,6 @@ export const useStore = create<AppState>()(
       isDepositModalOpen: false,
 
       setDepositModalOpen: (isOpen) => set({ isDepositModalOpen: isOpen }),
-      setToast: null, // Just placeholder here, overwritten below
       setCurrency: (currency) => set({ activeCurrency: currency }),
 
       executeTrade: (type, symbol, name, shares, cryptoPricePerShare) => {

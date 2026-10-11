@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Search, HelpCircle, ChevronDown } from "lucide-react";
 
 export default function HelpCenterPage() {
@@ -36,8 +37,8 @@ export default function HelpCenterPage() {
     <div className="min-h-screen bg-gray-50 py-20 px-6 sm:px-12">
       <div className="max-w-4xl mx-auto">
         <header className="text-center mb-16">
-          <div className="inline-flex items-center justify-center p-3 bg-blue-100 rounded-full mb-4">
-            <HelpCircle className="w-8 h-8 text-blue-700" />
+          <div className="inline-flex items-center justify-center p-3 bg-forge-orange/10 rounded-full mb-4">
+            <HelpCircle className="w-8 h-8 text-forge-orange" />
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6 tracking-tight">
             How can we help?
@@ -47,7 +48,7 @@ export default function HelpCenterPage() {
             <input 
               type="text" 
               placeholder="Search the knowledge base..." 
-              className="w-full pl-12 pr-4 py-4 rounded-xl border border-gray-200 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-lg transition"
+              className="w-full pl-12 pr-4 py-4 rounded-xl border border-gray-200 shadow-sm focus:ring-2 focus:ring-forge-orange focus:border-forge-orange outline-none text-lg transition"
             />
           </div>
         </header>
@@ -73,12 +74,12 @@ export default function HelpCenterPage() {
           ))}
         </div>
 
-        <div className="mt-16 bg-blue-50 rounded-2xl p-8 text-center border border-blue-100">
+        <div className="mt-16 bg-forge-orange/5 rounded-2xl p-8 text-center border border-forge-orange/20">
           <h3 className="text-xl font-bold text-gray-900 mb-2">Still need help?</h3>
           <p className="text-gray-600 mb-6">Our support team is available Monday through Friday to assist you.</p>
-          <a href="/contact" className="inline-block bg-blue-600 text-white font-medium px-6 py-2.5 rounded-lg hover:bg-blue-700 transition">
+          <Link href="/contact" className="inline-block bg-forge-orange text-white font-medium px-6 py-2.5 rounded-lg hover:bg-forge-orange-hover transition shadow-sm">
             Contact Support
-          </a>
+          </Link>
         </div>
       </div>
     </div>
