@@ -6,11 +6,11 @@ import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 
 const CURRENCIES: { id: CurrencyType; name: string; icon: string }[] = [
-  { id: "USD", name: "US Dollar", icon: "https://upload.wikimedia.org/wikipedia/commons/a/a4/Flag_of_the_United_States.svg" },
-  { id: "GBP", name: "British Pound", icon: "https://upload.wikimedia.org/wikipedia/commons/a/ae/Flag_of_the_United_Kingdom.svg" },
-  { id: "BTC", name: "Bitcoin", icon: "https://cryptologos.cc/logos/bitcoin-btc-logo.svg?v=025" },
-  { id: "ETH", name: "Ethereum", icon: "https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=025" },
-  { id: "SOL", name: "Solana", icon: "https://cryptologos.cc/logos/solana-sol-logo.svg?v=025" }
+  { id: "USD", name: "US Dollar", icon: "/currencies/usd.svg" },
+  { id: "GBP", name: "British Pound", icon: "/currencies/gbp.svg" },
+  { id: "BTC", name: "Bitcoin", icon: "/currencies/btc.svg" },
+  { id: "ETH", name: "Ethereum", icon: "/currencies/eth.svg" },
+  { id: "SOL", name: "Solana", icon: "/currencies/sol.svg" }
 ];
 
 export function CurrencySelector() {

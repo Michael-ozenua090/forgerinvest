@@ -16,21 +16,21 @@ const NETWORKS: Record<CryptoCurrency, { name: string; tag: string; icon: string
   BTC: {
     name: "Bitcoin",
     tag: "BTC Native SegWit",
-    icon: "https://cryptologos.cc/logos/bitcoin-btc-logo.svg?v=025",
+    icon: "/currencies/btc.svg",
     address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
     testCredit: 0.25
   },
   ETH: {
     name: "Ethereum",
     tag: "Ethereum Mainnet (ERC-20)",
-    icon: "https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=025",
+    icon: "/currencies/eth.svg",
     address: "0x71C83607fEF3D634e4C546aD340915f6A8209A64",
     testCredit: 2.5
   },
   SOL: {
     name: "Solana",
     tag: "Solana (SPL)",
-    icon: "https://cryptologos.cc/logos/solana-sol-logo.svg?v=025",
+    icon: "/currencies/sol.svg",
     address: "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
     testCredit: 25
   }
