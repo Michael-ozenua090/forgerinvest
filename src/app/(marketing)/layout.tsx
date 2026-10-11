@@ -35,7 +35,7 @@ export default function MarketingLayout({
           <div className="flex items-center gap-4">
             <button className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md border border-forge-gray-200 text-forge-gray-600 hover:border-forge-orange hover:text-forge-orange transition-colors">
               <Search size={14} />
-              <span className="text-xs font-medium">Search tickers...</span>
+              <span className="text-xs font-medium">Search plans...</span>
             </button>
             <Link href={ROUTES.auth.login} className="text-sm font-semibold text-forge-gray-900 border border-forge-gray-200 px-4 py-2 rounded-lg hover:bg-forge-gray-50 transition-colors">
               Log In
@@ -98,7 +98,7 @@ export default function MarketingLayout({
           {/* Regulatory Disclaimers */}
           <div className="border-t border-forge-gray-800 pt-8 text-xs text-forge-gray-500 space-y-3 leading-relaxed">
             <p>
-              Securities offered through Forge Securities LLC, Member FINRA/SIPC. Private market securities are speculative, illiquid, and carry high risk of loss.
+              Forge Capital provides structured fixed-term savings and capital growth plans across USD, GBP, and digital assets. Educational and wealth simulation platform designed for disciplined capital accumulation.
             </p>
             <p>&copy; 2026 Forge Global, Inc. All rights reserved.</p>
           </div>

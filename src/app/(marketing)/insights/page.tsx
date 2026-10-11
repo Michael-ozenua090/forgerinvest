@@ -1,27 +1,27 @@
-import { BookOpen, TrendingUp, Cpu, LineChart, ArrowRight } from "lucide-react";
+import { BookOpen, TrendingUp, Landmark, ShieldCheck, ArrowRight } from "lucide-react";
 
 export default function InsightsPage() {
   const featuredReports = [
     {
-      title: "Pre-IPO Liquidity Trends 2026",
-      category: "Market Report",
-      icon: <TrendingUp className="w-6 h-6 text-purple-600" />,
-      bg: "bg-purple-50",
-      description: "An in-depth analysis of secondary market volumes, valuation multiples, and liquidity timelines ahead of expected IPOs."
-    },
-    {
-      title: "AI Startup Valuations",
-      category: "Sector Analysis",
-      icon: <Cpu className="w-6 h-6 text-emerald-600" />,
-      bg: "bg-emerald-50",
-      description: "How generative AI platforms and foundational model companies are driving unprecedented private round valuations."
-    },
-    {
-      title: "The Tech IPO Pipeline",
-      category: "Quarterly Outlook",
-      icon: <LineChart className="w-6 h-6 text-forge-orange" />,
+      title: "The Math of Compounding: 1 to 12 Month Growth Horizons",
+      category: "Yield Strategy",
+      icon: <TrendingUp className="w-6 h-6 text-forge-orange" />,
       bg: "bg-forge-orange/10",
-      description: "A comprehensive look at the late-stage companies most likely to enter the public markets over the next 18 months."
+      description: "How disciplined time-locks generate up to +162% returns through algorithmic liquidity allocation."
+    },
+    {
+      title: "Multi-Asset Wealth: Balancing Fiat and Digital Currencies",
+      category: "Asset Allocation",
+      icon: <Landmark className="w-6 h-6 text-forge-orange" />,
+      bg: "bg-forge-orange/10",
+      description: "Strategic advantages of locking USD, GBP, BTC, ETH, and SOL into fixed-term savings contracts."
+    },
+    {
+      title: "Capital Protection in High-Yield Environments",
+      category: "Risk Management",
+      icon: <ShieldCheck className="w-6 h-6 text-forge-orange" />,
+      bg: "bg-forge-orange/10",
+      description: "Deep dive into our reserve backing models, automated maturity disbursements, and zero-loss risk frameworks."
     }
   ];
 
@@ -33,10 +33,10 @@ export default function InsightsPage() {
             <BookOpen className="w-8 h-8 text-forge-orange" />
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6 tracking-tight">
-            Private Market Insights
+            Capital Growth & Wealth Insights
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Your editorial hub for institutional-grade research, data-driven analysis, and expert commentary on the private markets.
+            Your educational hub for compound interest strategies, capital preservation models, and disciplined wealth creation across fiat and crypto assets.
           </p>
         </header>
 
@@ -70,7 +70,7 @@ export default function InsightsPage() {
         <section className="mt-20 bg-gray-900 rounded-3xl p-10 md:p-16 text-center shadow-xl">
           <h2 className="text-3xl font-bold text-white mb-4">Never miss an insight</h2>
           <p className="text-gray-300 max-w-xl mx-auto mb-8">
-            Subscribe to our weekly newsletter to get the latest private market data, research, and expert analysis delivered straight to your inbox.
+            Subscribe to our weekly newsletter to get the latest capital growth models, compound yield updates, and wealth strategies delivered straight to your inbox.
           </p>
           <form className="flex flex-col sm:flex-row max-w-md mx-auto gap-3">
             <input 

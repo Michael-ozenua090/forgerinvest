@@ -130,7 +130,7 @@ export default function KYCPage() {
           <CheckCircle2 size={24} className="shrink-0" />
           <div>
             <p className="font-bold text-sm">KYC Verification Submitted Successfully</p>
-            <p className="text-xs opacity-90">Your account is verified and you have full access to private market shares and funds.</p>
+            <p className="text-xs opacity-90">Your account is verified. You now have full clearance to withdraw matured capital and interest payouts.</p>
           </div>
         </div>
       )}

@@ -4,31 +4,31 @@ import { Search, HelpCircle, ChevronDown } from "lucide-react";
 export default function HelpCenterPage() {
   const faqCategories = [
     {
-      title: "Accreditation Requirements",
+      title: "Capital Growth & Savings Plans",
       faqs: [
-        { q: "What is an accredited investor?", a: "An accredited investor is an individual or a business entity that is allowed to trade securities that may not be registered with financial authorities. They must satisfy certain requirements regarding income, net worth, asset size, governance status, or professional experience." },
-        { q: "How do I verify my accreditation status?", a: "You can verify your status by providing proof of income (tax returns, W-2s) or proof of net worth (bank statements, brokerage statements) during the onboarding process." }
+        { q: "What is a Fixed-Term Growth Plan?", a: "A structured capital accumulation contract that locks principal for a predetermined duration (1, 2, 3, 6, or 12 months) and delivers predictable contracted yields from +6% to +162% upon maturity." },
+        { q: "What is the minimum starting capital?", a: "You can activate a growth plan with as little as $50.00 USD, or the equivalent in GBP, BTC, ETH, and SOL." }
       ]
     },
     {
-      title: "Buying Private Shares",
+      title: "Maturity & Returns",
       faqs: [
-        { q: "What is the minimum investment?", a: "The minimum investment varies by offering, but typically starts at $100,000 for standard private equity secondary transactions." },
-        { q: "How long does a transaction take to close?", a: "Secondary transactions typically take 30 to 60 days to close, as they often require Right of First Refusal (ROFR) waivers from the issuing company." }
+        { q: "How are yields calculated?", a: "Yields are calculated strictly according to your selected commitment horizon: 1 Month (+6%), 2 Months (+15%), 3 Months (+27%), 6 Months (+66%), and 12 Months (+162%). Both principal and accrued profit disburse together at maturity." },
+        { q: "Can I withdraw before my plan matures?", a: "To ensure maximum algorithmic compound returns and principal protection, plans remain locked until the designated maturity date, after which funds become fully liquid." }
       ]
     },
     {
-      title: "Selling Private Shares",
+      title: "Identity Verification (KYC)",
       faqs: [
-        { q: "Can I sell my vested options?", a: "Typically, you can only sell exercised shares, not unexercised options. However, certain structured liquidity programs may allow for cashless exercises." },
-        { q: "What fees are involved in selling?", a: "Forge charges a standard brokerage commission on successful transactions. Exact fees will be detailed in your pricing agreement prior to listing." }
+        { q: "When do I need to complete identity verification?", a: "To keep onboarding friction-free, KYC verification is only requested when you initiate a withdrawal of your matured capital and profits to external accounts." },
+        { q: "How long does verification take?", a: "Identity verification is automated and typically takes less than 2 minutes upon providing your basic details and valid identification." }
       ]
     },
     {
-      title: "Wallet & Funding",
+      title: "Wallet & Multi-Asset Funding",
       faqs: [
-        { q: "How do I fund my account?", a: "You can fund your Forge account via wire transfer. Instructions are provided securely within your dashboard once an investment is allocated." },
-        { q: "Are my funds secure?", a: "Yes. Client funds are held in segregated, legally isolated escrow accounts managed by our regulated banking partners." }
+        { q: "How do I fund my account?", a: "You can fund your Forge balance using USD, GBP, Bitcoin (BTC), Ethereum (ETH), or Solana (SOL) with live conversion rates." },
+        { q: "Are my funds secure?", a: "Yes. All deposits and locked capital are protected with institutional-grade security protocols, reserve-backed models, and zero-loss risk frameworks." }
       ]
     }
   ];

@@ -11,7 +11,7 @@ export default function AboutPage() {
           About <span className="text-forge-orange">Forge</span>
         </h1>
         <p className="text-xl text-forge-gray-600 max-w-3xl leading-relaxed">
-          Revolutionizing the way people invest and trade in premium pre-IPO equity through our innovative all-in-one platform.
+          Empowering individuals to turn small capital into significant wealth through disciplined, fixed-term savings and guaranteed compound yields.
         </p>
       </section>
 
@@ -23,10 +23,10 @@ export default function AboutPage() {
           <h2 className="font-display font-extrabold text-3xl text-forge-gray-900 mb-6">Our Mission</h2>
           <div className="prose prose-lg text-forge-gray-600 max-w-none space-y-6">
             <p>
-              We're building the future of private market investing by combining cutting-edge technology with traditional investment principles. Our platform democratizes access to premium pre-IPO investment opportunities.
+              We are building the future of capital accumulation by combining algorithmic liquidity management with transparent, fixed-yield principles. Our platform democratizes access to institutional-grade growth plans with starting capital as accessible as $50.00 USD.
             </p>
             <p>
-              From direct secondary share trading to curated investment funds and seamless liquidity management, we provide everything you need to grow your wealth in the private markets.
+              From 1-month accelerated cycles to 12-month compounding horizons, we provide the infrastructure savers and investors need to protect principal and compound returns across fiat (USD, GBP) and major digital assets (BTC, ETH, SOL).
             </p>
           </div>
           
@@ -35,15 +35,15 @@ export default function AboutPage() {
               <div className="w-10 h-10 rounded-xl bg-forge-orange-wash flex items-center justify-center text-forge-orange mb-4">
                 <Landmark size={20} />
               </div>
-              <h3 className="font-bold text-forge-gray-900 mb-2">Investments</h3>
-              <p className="text-sm font-medium text-forge-gray-600">Automated, smart portfolio management for private funds.</p>
+              <h3 className="font-bold text-forge-gray-900 mb-2">Guaranteed Compounding</h3>
+              <p className="text-sm font-medium text-forge-gray-600">Fixed contracted yields from +6% to +162% with automated maturity payouts.</p>
             </div>
             <div className="clean-card p-6">
               <div className="w-10 h-10 rounded-xl bg-forge-orange-wash flex items-center justify-center text-forge-orange mb-4">
                 <TrendingUp size={20} />
               </div>
-              <h3 className="font-bold text-forge-gray-900 mb-2">Trading</h3>
-              <p className="text-sm font-medium text-forge-gray-600">Real-time marketplace data & execution for pre-IPO shares.</p>
+              <h3 className="font-bold text-forge-gray-900 mb-2">Multi-Asset Growth</h3>
+              <p className="text-sm font-medium text-forge-gray-600">Flexible funding and seamless execution across USD, GBP, BTC, ETH, and SOL.</p>
             </div>
           </div>
         </div>
@@ -61,8 +61,8 @@ export default function AboutPage() {
                 <Shield size={20} />
               </div>
               <div>
-                <h3 className="font-bold text-lg text-forge-gray-900 mb-2">Security First</h3>
-                <p className="text-forge-gray-600">Your assets and data are protected with enterprise-grade security measures and rigorous regulatory compliance.</p>
+                <h3 className="font-bold text-lg text-forge-gray-900 mb-2">Capital Protection First</h3>
+                <p className="text-forge-gray-600">Principal preservation is prioritized with automated lockups and zero hidden custody fees.</p>
               </div>
             </div>
             <div className="flex gap-6">
@@ -70,8 +70,8 @@ export default function AboutPage() {
                 <Zap size={20} />
               </div>
               <div>
-                <h3 className="font-bold text-lg text-forge-gray-900 mb-2">Innovation</h3>
-                <p className="text-forge-gray-600">We continuously push boundaries to deliver cutting-edge financial technology and seamless user experiences.</p>
+                <h3 className="font-bold text-lg text-forge-gray-900 mb-2">Disciplined Math</h3>
+                <p className="text-forge-gray-600">Clear, predictable return matrices with no market volatility risk during your commitment term.</p>
               </div>
             </div>
             <div className="flex gap-6">
@@ -79,8 +79,8 @@ export default function AboutPage() {
                 <Users size={20} />
               </div>
               <div>
-                <h3 className="font-bold text-lg text-forge-gray-900 mb-2">User-Centric</h3>
-                <p className="text-forge-gray-600">Every feature, interface, and decision is made with our users' success and satisfaction strictly in mind.</p>
+                <h3 className="font-bold text-lg text-forge-gray-900 mb-2">Accessible Growth</h3>
+                <p className="text-forge-gray-600">Removing minimum barriers so anyone can start building wealth with as little as $50.</p>
               </div>
             </div>
           </div>
@@ -90,7 +90,7 @@ export default function AboutPage() {
         <div>
           <h2 className="font-display font-extrabold text-3xl text-forge-gray-900 mb-6">Leadership Team</h2>
           <p className="text-lg text-forge-gray-600 mb-10">
-            Meet the visionaries behind our platform, bringing together decades of experience in finance, technology, and private markets.
+            Meet the visionaries behind our platform, bringing together decades of experience in finance, technology, and algorithmic wealth management.
           </p>
           
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -124,7 +124,7 @@ export default function AboutPage() {
       <section className="bg-forge-gray-50 border-t border-forge-gray-200 py-24 px-6 sm:px-10 text-center">
         <h2 className="font-display font-extrabold text-4xl text-forge-gray-900 mb-6">Ready to Get Started?</h2>
         <p className="text-xl text-forge-gray-600 max-w-2xl mx-auto mb-10">
-          Join thousands of users who are already building their wealth and accessing the private markets with Forge.
+          Join thousands of users who are already building their wealth and growing capital with Forge.
         </p>
         <Link 
           href={ROUTES.auth.register} 

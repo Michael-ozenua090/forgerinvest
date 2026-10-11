@@ -8,8 +8,8 @@ export default function CareersPage() {
       icon: <DollarSign className="w-6 h-6 text-forge-orange" />
     },
     {
-      title: "Pre-IPO Equity Packages",
-      description: "Own a piece of the infrastructure you're building.",
+      title: "Performance & Growth Incentives",
+      description: "Earn profit-sharing and capital performance bonuses based on platform milestones.",
       icon: <Briefcase className="w-6 h-6 text-forge-orange" />
     },
     {
@@ -26,8 +26,8 @@ export default function CareersPage() {
 
   const positions = [
     { title: "Senior Full-Stack Engineer", department: "Engineering", location: "Remote" },
-    { title: "Brokerage Operations Specialist", department: "Operations", location: "New York" },
-    { title: "Compliance Officer", department: "Legal", location: "San Francisco" }
+    { title: "Treasury & Liquidity Operations Specialist", department: "Operations", location: "New York" },
+    { title: "Compliance & Regulatory Specialist", department: "Legal", location: "San Francisco" }
   ];
 
   return (
@@ -35,10 +35,10 @@ export default function CareersPage() {
       <div className="max-w-5xl mx-auto">
         <header className="text-center mb-16">
           <h1 className="text-5xl font-extrabold text-gray-900 mb-6 tracking-tight">
-            Build the Infrastructure of Private Capital.
+            Build the Infrastructure of Disciplined Wealth Accumulation.
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Join Forge in our mission to bring transparency, access, and efficiency to the private markets. We are looking for builders, thinkers, and innovators.
+            Join Forge in our mission to bring financial predictability, capital protection, and high-yield savings to global earners. We are looking for builders, quantitative thinkers, and innovators.
           </p>
         </header>
 

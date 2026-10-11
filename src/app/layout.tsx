@@ -32,26 +32,27 @@ const spaceGrotesk = Space_Grotesk({
 
 export const metadata: Metadata = {
   title: {
-    default: "Forge | Private Market & Pre-IPO Trading",
-    template: "%s | Forge",
+    default: "Forge Capital | High-Growth Fixed Savings & Capital Accumulation",
+    template: "%s | Forge Capital",
   },
   description:
-    "Forge is the leading platform for trading private market stocks and pre-IPO shares. Access exclusive deals, real-time data, and institutional-grade execution.",
+    "Forge Capital empowers individuals to turn small capital into significant wealth through disciplined fixed-term savings, compound growth plans, and multi-asset yield infrastructure.",
   keywords: [
-    "private market",
-    "pre-IPO",
-    "stock trading",
-    "secondary market",
-    "private equity",
-    "venture capital",
+    "high-growth savings",
+    "fixed-term savings",
+    "capital accumulation",
+    "compound interest",
+    "wealth simulation",
+    "digital assets",
+    "forge capital",
   ],
   openGraph: {
     type: "website",
     locale: "en_US",
-    siteName: "Forge",
-    title: "Forge | Private Market & Pre-IPO Trading",
+    siteName: "Forge Capital",
+    title: "Forge Capital | High-Growth Fixed Savings & Capital Accumulation",
     description:
-      "The leading platform for trading private market stocks and pre-IPO shares.",
+      "Turn small capital into significant wealth through disciplined fixed-term savings and guaranteed compound yields.",
   },
 };
 

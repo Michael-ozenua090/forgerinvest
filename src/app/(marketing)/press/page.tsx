@@ -4,18 +4,18 @@ export default function PressPage() {
   const releases = [
     {
       date: "October 5, 2026",
-      title: "Forge Reports Q3 Private Trading Volume Growth",
-      excerpt: "Trading volume on the Forge platform reached a new all-time high in Q3 as institutional adoption of private market infrastructure accelerates."
+      title: "Forge Capital Reports Record Inflows in Fixed-Term Growth Plans",
+      excerpt: "Fixed-term capital commitments across 1-month and 12-month plans reached new milestones as savers seek predictable, contracted compound yields."
     },
     {
       date: "September 12, 2026",
-      title: "Forge Expands Digital Asset & Crypto Custody Rails",
-      excerpt: "New infrastructure integrations provide seamless settlement for tokenized pre-IPO equity and secondary market digital assets."
+      title: "Forge Expands Digital Asset Yield Rails with BTC, ETH, and SOL Integration",
+      excerpt: "New infrastructure integrations provide seamless deposits and fixed-yield contracts for major cryptocurrencies alongside USD and GBP."
     },
     {
       date: "August 20, 2026",
-      title: "Forge Launches Next-Gen Valuations API",
-      excerpt: "Real-time pricing data and predictive analytics are now available for select institutional partners through our new Developer Portal."
+      title: "Forge Launches Educational Simulator for High-Yield Capital Accumulation",
+      excerpt: "Interactive wealth simulation features, real-time FX rate conversions, and disciplined savings calculators are now live for all platform members."
     }
   ];
 
@@ -27,7 +27,7 @@ export default function PressPage() {
             News & Press Releases
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl">
-            Stay updated with the latest announcements, platform milestones, and news from Forge.
+            Stay updated with the latest announcements, platform milestones, and news from Forge Capital.
           </p>
         </header>
 
