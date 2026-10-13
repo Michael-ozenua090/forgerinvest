@@ -54,6 +54,14 @@ export const metadata: Metadata = {
     description:
       "Turn small capital into significant wealth through disciplined fixed-term savings and guaranteed compound yields.",
   },
+  icons: {
+    icon: [
+      { url: "/FRGE.png", sizes: "any" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    shortcut: "/FRGE.png",
+    apple: "/FRGE.png",
+  },
 };
 
 // ─── Root Layout ──────────────────────────────────────────────────────────────
