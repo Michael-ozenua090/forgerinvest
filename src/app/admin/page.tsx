@@ -49,7 +49,6 @@ import {
 } from "@/lib/format";
 import { ROUTES } from "@/lib/routes";
 import { useHydration } from "@/lib/useHydration";
-import { createClient } from "@/lib/supabase/client";
 
 const ALL_CURRENCIES: CurrencyType[] = ['USD', 'GBP', 'BTC', 'ETH', 'SOL'];
 
@@ -108,61 +107,67 @@ export default function AdminPage() {
     };
   }, [router]);
 
-  // Supabase Data Binding for Admin Hub
+  // Supabase Data Binding for Admin Hub via Service Role Gateway (/api/admin/data)
   const loadAdminDataFromSupabase = useCallback(async () => {
     setIsDbLoading(true);
     try {
-      const supabase = createClient();
+      const res = await fetch("/api/admin/data");
+      if (res.ok) {
+        const data = await res.json();
 
-      // Fetch profiles
-      const { data: dbProfiles, error: profileErr } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
+        // Map profiles & linked wallets & savings plans
+        if (Array.isArray(data.users)) {
+          const mappedUsers: UserAccount[] = data.users.map((p: any) => ({
+            id: p.id,
+            name: p.name || p.full_name || "Member",
+            email: p.email || "",
+            role: p.role || "user",
+            status: p.status || "active",
+            createdAt: p.created_at || new Date().toISOString(),
+            baseBalanceUSD: Number(p.base_balance_usd ?? p.balance_usd ?? 0),
+            avatar: p.avatar_url || p.avatar || undefined,
+            kycStatus: p.kyc_status || "unverified",
+            linkedWallets: Array.isArray(p.linked_wallets)
+              ? p.linked_wallets.map((w: any) => ({
+                  id: w.id,
+                  currency: w.currency,
+                  label: w.label,
+                  address: w.address,
+                  isDefault: w.is_default ?? w.isDefault,
+                  createdAt: w.created_at || new Date().toISOString(),
+                }))
+              : [],
+            kycData:
+              p.kyc_data ||
+              (Array.isArray(data.kycSubmissions)
+                ? data.kycSubmissions.find((k: any) => k.user_id === p.id)
+                : undefined),
+            notifications: [],
+          }));
+          setUsers(mappedUsers);
+        }
 
-      if (!profileErr && dbProfiles) {
-        const mappedUsers: UserAccount[] = dbProfiles.map((p: any) => ({
-          id: p.id,
-          name: p.name || p.full_name || "Member",
-          email: p.email || "",
-          role: p.role || "user",
-          status: p.status || "active",
-          createdAt: p.created_at || new Date().toISOString(),
-          baseBalanceUSD: Number(p.base_balance_usd ?? p.balance_usd ?? 0),
-          avatar: p.avatar_url || p.avatar || undefined,
-          kycStatus: p.kyc_status || "unverified",
-          linkedWallets: [],
-          kycData: p.kyc_data || undefined,
-          notifications: [],
-        }));
-        setUsers(mappedUsers);
-      }
-
-      // Fetch transactions
-      const { data: dbTxs, error: txErr } = await supabase
-        .from("transactions")
-        .select("*")
-        .order("date", { ascending: false });
-
-      if (!txErr && dbTxs) {
-        const mappedTxs: Transaction[] = dbTxs.map((t: any) => ({
-          id: t.id,
-          date: t.date || t.created_at || new Date().toISOString(),
-          type: t.type,
-          description: t.description || "",
-          amount: Number(t.amount || 0),
-          currency: t.currency || "USD",
-          status: t.status,
-          txHash: t.tx_hash || t.txHash,
-          destinationAddress: t.destination_address || t.destinationAddress,
-          proofImage: t.proof_image || t.proofImage,
-          rejectionReason: t.rejection_reason || t.rejectionReason,
-          userId: t.user_id || t.userId,
-        }));
-        setTransactions(mappedTxs);
+        // Map transactions
+        if (Array.isArray(data.transactions)) {
+          const mappedTxs: Transaction[] = data.transactions.map((t: any) => ({
+            id: t.id,
+            date: t.date || t.created_at || new Date().toISOString(),
+            type: t.type,
+            description: t.description || "",
+            amount: Number(t.amount || 0),
+            currency: t.currency || "USD",
+            status: t.status,
+            txHash: t.tx_hash || t.txHash,
+            destinationAddress: t.destination_address || t.destinationAddress,
+            proofImage: t.proof_image || t.proofImage,
+            rejectionReason: t.rejection_reason || t.rejectionReason,
+            userId: t.user_id || t.userId,
+          }));
+          setTransactions(mappedTxs);
+        }
       }
     } catch (err) {
-      console.error("Error loading admin data from Supabase:", err);
+      console.error("Error loading admin data from API:", err);
     } finally {
       setIsDbLoading(false);
     }
@@ -311,13 +316,18 @@ export default function AdminPage() {
     });
 
     try {
-      const supabase = createClient();
-      await supabase
-        .from("profiles")
-        .update({ name: trimmedName, email: trimmedEmail })
-        .eq("id", editUser.id);
+      await fetch("/api/admin/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_user",
+          userId: editUser.id,
+          name: trimmedName,
+          email: trimmedEmail,
+        }),
+      });
     } catch (err) {
-      console.error("Failed to sync profile update to Supabase:", err);
+      console.error("Failed to sync profile update to Admin Gateway:", err);
     }
 
     setEditUser(null);
@@ -338,14 +348,18 @@ export default function AdminPage() {
     adminUpdateUserBalance(balancesUser.id, balanceCurrency, num);
 
     try {
-      const supabase = createClient();
       const newBaseUSD = convertCryptoToFiat(num, balanceCurrency, liveRates);
-      await supabase
-        .from("profiles")
-        .update({ base_balance_usd: newBaseUSD })
-        .eq("id", balancesUser.id);
+      await fetch("/api/admin/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_balance",
+          userId: balancesUser.id,
+          newBalanceUSD: newBaseUSD,
+        }),
+      });
     } catch (err) {
-      console.error("Failed to sync balance update to Supabase:", err);
+      console.error("Failed to sync balance update to Admin Gateway:", err);
     }
 
     setBalancesUser(null);
@@ -358,13 +372,17 @@ export default function AdminPage() {
     adminToggleSuspension(userId);
 
     try {
-      const supabase = createClient();
-      await supabase
-        .from("profiles")
-        .update({ status: nextStatus })
-        .eq("id", userId);
+      await fetch("/api/admin/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "toggle_suspend",
+          userId,
+          status: nextStatus,
+        }),
+      });
     } catch (err) {
-      console.error("Failed to sync suspension to Supabase:", err);
+      console.error("Failed to sync suspension to Admin Gateway:", err);
     }
   };
 
@@ -379,13 +397,16 @@ export default function AdminPage() {
     adminDeleteUser(userId);
 
     try {
-      const supabase = createClient();
-      await supabase
-        .from("profiles")
-        .delete()
-        .eq("id", userId);
+      await fetch("/api/admin/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete_user",
+          userId,
+        }),
+      });
     } catch (err) {
-      console.error("Failed to sync deletion to Supabase:", err);
+      console.error("Failed to sync deletion to Admin Gateway:", err);
     }
 
     setDeleteConfirmUser(null);
@@ -396,13 +417,16 @@ export default function AdminPage() {
     adminApproveKyc(userId);
 
     try {
-      const supabase = createClient();
-      await supabase
-        .from("profiles")
-        .update({ kyc_status: "verified" })
-        .eq("id", userId);
+      await fetch("/api/admin/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "approve_kyc",
+          userId,
+        }),
+      });
     } catch (err) {
-      console.error("Failed to sync KYC approval to Supabase:", err);
+      console.error("Failed to sync KYC approval to Admin Gateway:", err);
     }
 
     if (inspectKycUser?.id === userId) {
@@ -418,13 +442,17 @@ export default function AdminPage() {
     adminRejectKyc(userId, reason);
 
     try {
-      const supabase = createClient();
-      await supabase
-        .from("profiles")
-        .update({ kyc_status: "rejected" })
-        .eq("id", userId);
+      await fetch("/api/admin/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reject_kyc",
+          userId,
+          reason,
+        }),
+      });
     } catch (err) {
-      console.error("Failed to sync KYC rejection to Supabase:", err);
+      console.error("Failed to sync KYC rejection to Admin Gateway:", err);
     }
 
     setRejectKycUser(null);
@@ -439,26 +467,20 @@ export default function AdminPage() {
     approveDeposit(txId);
 
     try {
-      const supabase = createClient();
-      await supabase
-        .from("transactions")
-        .update({ status: "COMPLETED" })
-        .eq("id", txId);
-
       const targetTx = transactions.find((t) => t.id === txId);
-      if (targetTx && targetTx.userId) {
-        const depositAmountUsd = convertCryptoToFiat(targetTx.amount, targetTx.currency, liveRates);
-        const targetUser = users.find((u) => u.id === targetTx.userId);
-        if (targetUser) {
-          const newBal = (targetUser.baseBalanceUSD || 0) + depositAmountUsd;
-          await supabase
-            .from("profiles")
-            .update({ base_balance_usd: newBal })
-            .eq("id", targetTx.userId);
-        }
-      }
+      const depositAmountUsd = targetTx ? convertCryptoToFiat(targetTx.amount, targetTx.currency, liveRates) : 0;
+      await fetch("/api/admin/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "approve_deposit",
+          txId,
+          userId: targetTx?.userId,
+          amountUsd: depositAmountUsd,
+        }),
+      });
     } catch (err) {
-      console.error("Failed to sync deposit approval to Supabase:", err);
+      console.error("Failed to sync deposit approval to Admin Gateway:", err);
     }
   };
 
@@ -470,13 +492,17 @@ export default function AdminPage() {
     rejectDeposit(txId, reason);
 
     try {
-      const supabase = createClient();
-      await supabase
-        .from("transactions")
-        .update({ status: "REJECTED", rejection_reason: reason })
-        .eq("id", txId);
+      await fetch("/api/admin/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reject_deposit",
+          txId,
+          reason,
+        }),
+      });
     } catch (err) {
-      console.error("Failed to sync deposit rejection to Supabase:", err);
+      console.error("Failed to sync deposit rejection to Admin Gateway:", err);
     }
 
     setRejectDepositTx(null);
@@ -484,13 +510,30 @@ export default function AdminPage() {
   };
 
   // Push Notification Handler
-  const handleSendPushNotification = (e: React.FormEvent) => {
+  const handleSendPushNotification = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pushMessage.trim()) return;
-    adminPushNotification(pushRecipient, pushMessage.trim());
+    const msg = pushMessage.trim();
+    const recipient = pushRecipient;
+
+    adminPushNotification(recipient, msg);
     setPushMessage("");
     setPushSentSuccess(true);
     setTimeout(() => setPushSentSuccess(false), 4000);
+
+    try {
+      await fetch("/api/admin/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "broadcast_notification",
+          recipientId: recipient,
+          message: msg,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to broadcast notification via Admin Gateway:", err);
+    }
   };
 
   if (isAdminAuthLoading) {

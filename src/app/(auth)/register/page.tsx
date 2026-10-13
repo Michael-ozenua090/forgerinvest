@@ -47,6 +47,7 @@ export default function RegisterPage() {
         email,
         password,
         options: {
+          emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://forgerinvest.com/login',
           data: {
             first_name: firstName,
             last_name: lastName,
