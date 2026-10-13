@@ -222,6 +222,49 @@ export default function PortalShell({ children }: { children: React.ReactNode })
     };
   }, [router, setCurrentUser, setLinkedWallets, setSavingsPlans, setTransactions, setNotifications]);
 
+  // Realtime Live Balance and KYC Status Synchronization
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const supabase = createClient();
+
+    const channel = supabase
+      .channel(`profile-${currentUser.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${currentUser.id}` },
+        (payload: any) => {
+          if (payload.new?.base_balance_usd !== undefined) {
+            // Update store balance live on user's screen
+            const newBal = Number(payload.new.base_balance_usd);
+            useStore.setState((state) => ({
+              baseBalanceUSD: newBal,
+              cryptoBalances: {
+                USD: newBal,
+                GBP: newBal * (state.liveRates.GBP || 0.79),
+                BTC: newBal / (state.liveRates.BTC || 85000),
+                ETH: newBal / (state.liveRates.ETH || 2600),
+                SOL: newBal / (state.liveRates.SOL || 180),
+              },
+              currentUser: state.currentUser ? { ...state.currentUser, baseBalanceUSD: newBal } : state.currentUser,
+            }));
+          }
+          if (payload.new?.kyc_status) {
+            const isVerified = payload.new.kyc_status === 'verified';
+            useStore.setState((state) => ({
+              isKycCompleted: isVerified,
+              currentUser: state.currentUser ? { ...state.currentUser, kycStatus: payload.new.kyc_status } : state.currentUser,
+              user: { ...state.user, kycStatus: payload.new.kyc_status, isVerified },
+            }));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser?.id]);
+
   const handleSignOut = async () => {
     try {
       const supabase = createClient();

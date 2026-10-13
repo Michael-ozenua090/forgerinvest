@@ -32,6 +32,7 @@ export interface UserAccount {
   avatar?: string; // Base64 data URL
   kycStatus: 'unverified' | 'pending' | 'verified' | 'rejected';
   kycData?: {
+    id?: string;
     firstName: string;
     lastName: string;
     dob: string;

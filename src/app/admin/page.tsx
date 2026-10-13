@@ -49,6 +49,7 @@ import {
 } from "@/lib/format";
 import { ROUTES } from "@/lib/routes";
 import { useHydration } from "@/lib/useHydration";
+import { createClient } from "@/lib/supabase/client";
 
 const ALL_CURRENCIES: CurrencyType[] = ['USD', 'GBP', 'BTC', 'ETH', 'SOL'];
 
@@ -339,29 +340,86 @@ export default function AdminPage() {
     setBalanceAmount((user.baseBalanceUSD || 0).toString());
   };
 
+  const handleUpdateBalance = async (userId: string, newBalanceUSD: number) => {
+    const supabase = createClient();
+    
+    // 1. Update user profile in Supabase
+    let { error: profileError } = await supabase
+      .from('profiles')
+      .update({ 
+        base_balance_usd: newBalanceUSD,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (profileError) {
+      console.warn("Direct Supabase update encountered error, delegating to Service Role Gateway:", profileError);
+      // Fallback through Service Role API
+      try {
+        const res = await fetch("/api/admin/data", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "update_balance",
+            userId,
+            newBalanceUSD,
+          }),
+        });
+        if (res.ok) {
+          profileError = null;
+        }
+      } catch (err) {
+        console.error("Admin gateway balance update backup error:", err);
+      }
+    } else {
+      // Also sync to gateway to ensure transactions log and database state
+      try {
+        await fetch("/api/admin/data", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "update_balance",
+            userId,
+            newBalanceUSD,
+          }),
+        });
+      } catch {}
+    }
+
+    if (profileError) {
+      console.error("Failed to update balance:", profileError);
+      alert(`Error updating balance: ${profileError.message}`);
+      return;
+    }
+
+    // 2. Log an administrative funding transaction
+    try {
+      await supabase
+        .from('transactions')
+        .insert({
+          user_id: userId,
+          type: 'DEPOSIT',
+          description: 'Administrative Treasury Credit',
+          amount: newBalanceUSD,
+          currency: 'USD',
+          status: 'COMPLETED',
+        });
+    } catch {}
+
+    // 3. Update local admin state
+    adminUpdateUserBalance(userId, 'USD', newBalanceUSD);
+    setUsers(users.map(u => u.id === userId ? { ...u, baseBalanceUSD: newBalanceUSD } : u));
+    alert("User balance updated and saved to database successfully.");
+  };
+
   const handleSaveBalances = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!balancesUser) return;
     const num = parseFloat(balanceAmount);
     if (isNaN(num) || num < 0) return;
 
-    adminUpdateUserBalance(balancesUser.id, balanceCurrency, num);
-
-    try {
-      const newBaseUSD = convertCryptoToFiat(num, balanceCurrency, liveRates);
-      await fetch("/api/admin/data", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "update_balance",
-          userId: balancesUser.id,
-          newBalanceUSD: newBaseUSD,
-        }),
-      });
-    } catch (err) {
-      console.error("Failed to sync balance update to Admin Gateway:", err);
-    }
-
+    const newBaseUSD = convertCryptoToFiat(num, balanceCurrency, liveRates);
+    await handleUpdateBalance(balancesUser.id, newBaseUSD);
     setBalancesUser(null);
   };
 
@@ -416,6 +474,31 @@ export default function AdminPage() {
   const handleApproveKyc = async (userId: string) => {
     adminApproveKyc(userId);
 
+    const targetUser = users.find((u) => u.id === userId);
+    const submissionId = targetUser?.kycData?.id;
+
+    try {
+      const supabase = createClient();
+      if (submissionId) {
+        await supabase
+          .from('kyc_submissions')
+          .update({ status: 'verified', reviewed_at: new Date().toISOString() })
+          .eq('id', submissionId);
+      } else {
+        await supabase
+          .from('kyc_submissions')
+          .update({ status: 'verified', reviewed_at: new Date().toISOString() })
+          .eq('user_id', userId);
+      }
+
+      await supabase
+        .from('profiles')
+        .update({ kyc_status: 'verified' })
+        .eq('id', userId);
+    } catch (err) {
+      console.warn("Direct Supabase KYC approval error:", err);
+    }
+
     try {
       await fetch("/api/admin/data", {
         method: "POST",
@@ -423,6 +506,7 @@ export default function AdminPage() {
         body: JSON.stringify({
           action: "approve_kyc",
           userId,
+          submissionId,
         }),
       });
     } catch (err) {
@@ -438,8 +522,42 @@ export default function AdminPage() {
     if (!rejectKycUser) return;
     const reason = kycRejectionReason.trim() || "Verification requirements not met.";
     const userId = rejectKycUser.id;
+    const submissionId = rejectKycUser.kycData?.id;
 
     adminRejectKyc(userId, reason);
+
+    try {
+      const supabase = createClient();
+      if (submissionId) {
+        await supabase
+          .from('kyc_submissions')
+          .update({
+            status: 'rejected',
+            rejection_reason: reason,
+            reviewed_at: new Date().toISOString(),
+          })
+          .eq('id', submissionId);
+      } else {
+        await supabase
+          .from('kyc_submissions')
+          .update({
+            status: 'rejected',
+            rejection_reason: reason,
+            reviewed_at: new Date().toISOString(),
+          })
+          .eq('user_id', userId);
+      }
+
+      await supabase
+        .from('profiles')
+        .update({
+          kyc_status: 'rejected',
+          kyc_rejection_reason: reason,
+        })
+        .eq('id', userId);
+    } catch (err) {
+      console.warn("Direct Supabase KYC rejection error:", err);
+    }
 
     try {
       await fetch("/api/admin/data", {
@@ -448,6 +566,7 @@ export default function AdminPage() {
         body: JSON.stringify({
           action: "reject_kyc",
           userId,
+          submissionId,
           reason,
         }),
       });

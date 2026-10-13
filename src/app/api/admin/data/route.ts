@@ -171,21 +171,30 @@ export async function POST(req: NextRequest) {
       }
 
       case 'approve_kyc': {
-        const { userId } = payload;
-        if (!userId) {
-          return NextResponse.json({ error: 'Missing user ID.' }, { status: 400 });
+        const { userId, submissionId } = payload;
+        if (!userId && !submissionId) {
+          return NextResponse.json({ error: 'Missing user ID or submission ID.' }, { status: 400 });
         }
 
-        await supabaseAdmin
-          .from('profiles')
-          .update({ kyc_status: 'verified' })
-          .eq('id', userId);
+        if (userId) {
+          await supabaseAdmin
+            .from('profiles')
+            .update({ kyc_status: 'verified' })
+            .eq('id', userId);
+        }
 
         try {
-          await supabaseAdmin
-            .from('kyc_submissions')
-            .update({ status: 'verified' })
-            .eq('user_id', userId);
+          if (submissionId) {
+            await supabaseAdmin
+              .from('kyc_submissions')
+              .update({ status: 'verified', reviewed_at: new Date().toISOString() })
+              .eq('id', submissionId);
+          } else if (userId) {
+            await supabaseAdmin
+              .from('kyc_submissions')
+              .update({ status: 'verified', reviewed_at: new Date().toISOString() })
+              .eq('user_id', userId);
+          }
         } catch {
           // Table may not exist
         }
@@ -194,24 +203,43 @@ export async function POST(req: NextRequest) {
       }
 
       case 'reject_kyc': {
-        const { userId, reason } = payload;
-        if (!userId) {
-          return NextResponse.json({ error: 'Missing user ID.' }, { status: 400 });
+        const { userId, submissionId, reason } = payload;
+        if (!userId && !submissionId) {
+          return NextResponse.json({ error: 'Missing user ID or submission ID.' }, { status: 400 });
         }
 
-        await supabaseAdmin
-          .from('profiles')
-          .update({ kyc_status: 'rejected' })
-          .eq('id', userId);
+        const rejectionReason = reason || 'Document verification failed.';
+
+        if (userId) {
+          await supabaseAdmin
+            .from('profiles')
+            .update({
+              kyc_status: 'rejected',
+              kyc_rejection_reason: rejectionReason,
+            })
+            .eq('id', userId);
+        }
 
         try {
-          await supabaseAdmin
-            .from('kyc_submissions')
-            .update({
-              status: 'rejected',
-              rejection_reason: reason || 'Document verification failed.',
-            })
-            .eq('user_id', userId);
+          if (submissionId) {
+            await supabaseAdmin
+              .from('kyc_submissions')
+              .update({
+                status: 'rejected',
+                rejection_reason: rejectionReason,
+                reviewed_at: new Date().toISOString(),
+              })
+              .eq('id', submissionId);
+          } else if (userId) {
+            await supabaseAdmin
+              .from('kyc_submissions')
+              .update({
+                status: 'rejected',
+                rejection_reason: rejectionReason,
+                reviewed_at: new Date().toISOString(),
+              })
+              .eq('user_id', userId);
+          }
         } catch {
           // Table may not exist
         }
@@ -227,8 +255,24 @@ export async function POST(req: NextRequest) {
 
         await supabaseAdmin
           .from('profiles')
-          .update({ base_balance_usd: Number(newBalanceUSD) })
+          .update({ 
+            base_balance_usd: Number(newBalanceUSD),
+            updated_at: new Date().toISOString(),
+          })
           .eq('id', userId);
+
+        try {
+          await supabaseAdmin
+            .from('transactions')
+            .insert({
+              user_id: userId,
+              type: 'DEPOSIT',
+              description: 'Administrative Treasury Credit',
+              amount: Number(newBalanceUSD),
+              currency: 'USD',
+              status: 'COMPLETED',
+            });
+        } catch {}
 
         return NextResponse.json({ success: true, message: 'Balance updated.' });
       }
