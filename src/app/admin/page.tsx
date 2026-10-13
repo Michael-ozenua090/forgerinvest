@@ -924,7 +924,7 @@ export default function AdminPage() {
                           {/* Linked Wallets */}
                           <td className="py-4 px-6">
                             <span className="text-xs font-bold text-forge-gray-700">
-                              {user.linkedWallets?.length || 0} Accounts
+                              {user.linkedWallets?.length || 0} Wallets
                             </span>
                             {user.linkedWallets && user.linkedWallets.length > 0 && (
                               <p className="text-[11px] text-forge-gray-400 truncate max-w-[140px]">
@@ -2005,10 +2005,10 @@ export default function AdminPage() {
             {/* Linked Wallets */}
             <div>
               <h4 className="font-display font-bold text-sm text-forge-gray-900 mb-2">
-                Linked Destination Accounts ({auditUser.linkedWallets?.length || 0})
+                Linked Wallets ({auditUser.linkedWallets?.length || 0})
               </h4>
               {(!auditUser.linkedWallets || auditUser.linkedWallets.length === 0) ? (
-                <p className="text-xs text-forge-gray-400 italic">No linked accounts.</p>
+                <p className="text-xs text-forge-gray-400 italic">No linked wallets.</p>
               ) : (
                 <div className="space-y-2">
                   {auditUser.linkedWallets.map((w) => (

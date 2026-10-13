@@ -6,7 +6,6 @@ import {
   ShieldCheck, 
   ArrowDownToLine, 
   ArrowUpFromLine, 
-  Building2, 
   Plus,
   Trash2,
   Copy,
@@ -20,7 +19,7 @@ import Link from "next/link";
 import { useHydration } from "@/lib/useHydration";
 import { createClient } from "@/lib/supabase/client";
 
-const CURRENCY_LIST: CurrencyType[] = ['USD', 'GBP', 'BTC', 'ETH', 'SOL'];
+const CRYPTO_LIST: CurrencyType[] = ['BTC', 'ETH', 'SOL'];
 
 export default function WalletPage() {
   const isHydrated = useHydration();
@@ -35,12 +34,15 @@ export default function WalletPage() {
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
-  const [newCurrency, setNewCurrency] = useState<CurrencyType>(activeCurrency);
+  const defaultCrypto: CurrencyType = activeCurrency === 'ETH' || activeCurrency === 'SOL' ? activeCurrency : 'BTC';
+  const [newCurrency, setNewCurrency] = useState<CurrencyType>(defaultCrypto);
   const [newLabel, setNewLabel] = useState("");
   const [newAddress, setNewAddress] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
-  const linkedWallets = currentUser?.linkedWallets || [];
+  const linkedWallets = (currentUser?.linkedWallets || []).filter(
+    (w) => w.currency === 'BTC' || w.currency === 'ETH' || w.currency === 'SOL'
+  );
 
   const handleCopy = (address: string, id: string) => {
     navigator.clipboard.writeText(address);
@@ -51,11 +53,11 @@ export default function WalletPage() {
   const handleAddWallet = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newLabel.trim()) {
-      setFormError("Please provide an account label.");
+      setFormError("Please provide a wallet label.");
       return;
     }
     if (!newAddress.trim() || newAddress.trim().length < 6) {
-      setFormError("Please provide a valid destination address or account.");
+      setFormError("Please provide a valid destination wallet address.");
       return;
     }
 
@@ -109,7 +111,7 @@ export default function WalletPage() {
           Crypto Wallet
         </h1>
         <p className="font-medium text-forge-gray-600">
-          Manage your digital assets and designated payout destination accounts.
+          Manage your digital assets and designated payout destination wallets.
         </p>
       </div>
 
@@ -166,40 +168,39 @@ export default function WalletPage() {
       <div className="clean-card overflow-hidden bg-white rounded-2xl border border-forge-gray-200 shadow-sm">
         <div className="p-6 border-b border-forge-gray-100 flex justify-between items-center">
           <div>
-            <h2 className="font-display font-bold text-xl text-forge-gray-900">Linked Destination Accounts</h2>
-            <p className="text-xs text-forge-gray-500 mt-0.5">External addresses verified for capital and profits withdrawals</p>
+            <h2 className="font-display font-bold text-xl text-forge-gray-900">Linked Destination Wallets</h2>
+            <p className="text-xs text-forge-gray-500 mt-0.5">External crypto addresses verified for capital and profits withdrawals</p>
           </div>
           <button 
             onClick={() => {
-              setNewCurrency(activeCurrency);
+              setNewCurrency(activeCurrency === 'ETH' || activeCurrency === 'SOL' ? activeCurrency : 'BTC');
               setFormError(null);
               setIsLinkModalOpen(true);
             }}
             className="text-xs font-bold text-white bg-forge-gray-900 hover:bg-black px-3.5 py-2 rounded-xl transition-colors flex items-center gap-1.5 shadow-sm"
           >
-            <Plus size={14} /> Link Account
+            <Plus size={14} /> Link Wallet
           </button>
         </div>
 
         {!isHydrated ? (
           <div className="p-12 text-center text-forge-gray-400 animate-pulse font-medium text-sm">
-            Loading accounts...
+            Loading wallets...
           </div>
         ) : linkedWallets.length === 0 ? (
           <div className="p-12 text-center text-forge-gray-500">
             <Wallet size={36} className="mx-auto text-forge-gray-300 mb-2" />
-            <p className="font-bold text-forge-gray-700">No destination accounts linked yet.</p>
-            <p className="text-xs text-forge-gray-400 mt-1">Click &apos;+ Link Account&apos; to register your withdrawal address.</p>
+            <p className="font-bold text-forge-gray-700">No destination wallets linked yet.</p>
+            <p className="text-xs text-forge-gray-400 mt-1">Click &apos;+ Link Wallet&apos; to register your withdrawal address.</p>
           </div>
         ) : (
           <div className="divide-y divide-forge-gray-100">
             {linkedWallets.map((wallet) => {
-              const isFiat = wallet.currency === 'USD' || wallet.currency === 'GBP';
               return (
                 <div key={wallet.id} className="p-5 flex items-center justify-between hover:bg-forge-gray-50/60 transition-colors">
                   <div className="flex items-center gap-4 min-w-0">
                     <div className="w-12 h-12 rounded-xl bg-forge-gray-100 text-forge-gray-700 flex items-center justify-center shrink-0 border border-forge-gray-200">
-                      {isFiat ? <Building2 size={22} /> : <Wallet size={22} />}
+                      <Wallet size={22} />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -249,7 +250,7 @@ export default function WalletPage() {
         )}
       </div>
 
-      {/* ── Link Account Modal ─────────────────────────────────────────── */}
+      {/* ── Link Destination Wallet Modal ─────────────────────────────────────────── */}
       {isLinkModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-forge-gray-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="fixed inset-0" onClick={() => setIsLinkModalOpen(false)} />
@@ -260,8 +261,8 @@ export default function WalletPage() {
                   <Wallet size={20} />
                 </div>
                 <div>
-                  <h3 className="font-display font-bold text-xl text-forge-gray-900">Link Destination Account</h3>
-                  <p className="text-xs text-forge-gray-500">Authorize an external address for cashouts</p>
+                  <h3 className="font-display font-bold text-xl text-forge-gray-900">Link Destination Wallet</h3>
+                  <p className="text-xs text-forge-gray-500">Authorize an external crypto wallet for cashouts</p>
                 </div>
               </div>
               <button 
@@ -285,8 +286,8 @@ export default function WalletPage() {
                 <label className="block text-xs font-bold uppercase tracking-wider text-forge-gray-700 mb-1.5">
                   Asset / Currency
                 </label>
-                <div className="grid grid-cols-5 gap-2">
-                  {CURRENCY_LIST.map((c) => (
+                <div className="grid grid-cols-3 gap-2">
+                  {CRYPTO_LIST.map((c) => (
                     <button
                       key={c}
                       type="button"
@@ -305,28 +306,28 @@ export default function WalletPage() {
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-forge-gray-700 mb-1.5">
-                  Account / Wallet Label
+                  WALLET LABEL
                 </label>
                 <input
                   type="text"
                   required
                   value={newLabel}
                   onChange={(e) => setNewLabel(e.target.value)}
-                  placeholder="e.g. Ledger Cold Vault, Metamask, Chase Checking"
+                  placeholder="e.g. Ledger Cold Vault, MetaMask, Phantom"
                   className="w-full bg-forge-gray-50 border border-forge-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-forge-gray-900 focus:outline-none focus:ring-2 focus:ring-forge-orange focus:bg-white"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-forge-gray-700 mb-1.5">
-                  Destination Address or IBAN
+                  DESTINATION WALLET ADDRESS
                 </label>
                 <input
                   type="text"
                   required
                   value={newAddress}
                   onChange={(e) => setNewAddress(e.target.value)}
-                  placeholder="e.g. 0x... / bc1q... / GB29X..."
+                  placeholder="e.g. 0x... / bc1q... / 7xKX..."
                   className="w-full bg-forge-gray-50 border border-forge-gray-200 rounded-xl px-4 py-3 text-sm font-mono font-semibold text-forge-gray-900 focus:outline-none focus:ring-2 focus:ring-forge-orange focus:bg-white"
                 />
               </div>
@@ -343,7 +344,7 @@ export default function WalletPage() {
                   type="submit"
                   className="px-5 py-2.5 bg-forge-orange text-white text-xs font-bold rounded-xl hover:bg-forge-orange-hover transition-colors shadow-sm"
                 >
-                  Save Account
+                  Save Wallet
                 </button>
               </div>
             </form>

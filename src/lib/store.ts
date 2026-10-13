@@ -15,8 +15,8 @@ export type { CurrencyType, PlanDurationMonths };
 export interface LinkedWallet {
   id: string;
   currency: CurrencyType;
-  label: string; // e.g. "Personal Ledger", "Metamask", "Chase Checking"
-  address: string; // e.g. "0x71C...", "bc1q...", or IBAN/Routing
+  label: string; // e.g. "Personal Ledger", "MetaMask", "Phantom"
+  address: string; // e.g. "0x71C...", "bc1q...", or "7xKX..."
   isDefault?: boolean;
   createdAt: string;
 }

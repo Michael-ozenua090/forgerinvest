@@ -8,20 +8,18 @@ import {
   ArrowLeft, 
   ArrowUpFromLine, 
   Wallet, 
-  ShieldAlert, 
   Plus, 
   Check, 
   X, 
-  Building2, 
-  ExternalLink,
-  CheckCircle2,
   AlertCircle
 } from "lucide-react";
 import { useStore, LinkedWallet } from "@/lib/store";
-import { formatCrypto } from "@/lib/format";
+import { CurrencyType, formatCrypto } from "@/lib/format";
 import { KycGateModal } from "@/components/KycGateModal";
 import { useHydration } from "@/lib/useHydration";
 import { createClient } from "@/lib/supabase/client";
+
+const CRYPTO_CURRENCIES: CurrencyType[] = ['BTC', 'ETH', 'SOL'];
 
 export default function WithdrawPage() {
   const isHydrated = useHydration();
@@ -35,41 +33,53 @@ export default function WithdrawPage() {
     addLinkedWallet
   } = useStore();
 
-  const availableCrypto = getBalance(activeCurrency);
-  
   const [step, setStep] = useState<1 | 2>(1);
   const [withdrawAmount, setWithdrawAmount] = useState<string>("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [showKycGate, setShowKycGate] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Destination wallet selection state
-  const matchingWallets = (currentUser?.linkedWallets || []).filter(
-    (w) => w.currency === activeCurrency
+  // Destination wallet selection state (crypto only: BTC, ETH, SOL)
+  const linkedCryptoWallets = (currentUser?.linkedWallets || []).filter(
+    (w) => w.currency === 'BTC' || w.currency === 'ETH' || w.currency === 'SOL'
   );
 
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
 
-  // Sync selected wallet when activeCurrency or matchingWallets change
+  // Sync selected wallet when activeCurrency or linkedCryptoWallets change
   useEffect(() => {
-    if (matchingWallets.length > 0) {
-      const exists = matchingWallets.some((w) => w.id === selectedWalletId);
+    if (linkedCryptoWallets.length > 0) {
+      const exists = linkedCryptoWallets.some((w) => w.id === selectedWalletId);
       if (!exists) {
-        const defaultWallet = matchingWallets.find((w) => w.isDefault) || matchingWallets[0];
+        const matchActive = linkedCryptoWallets.find((w) => w.currency === activeCurrency);
+        const defaultWallet = matchActive || linkedCryptoWallets.find((w) => w.isDefault) || linkedCryptoWallets[0];
         setSelectedWalletId(defaultWallet.id);
       }
     } else {
       setSelectedWalletId(null);
     }
-  }, [activeCurrency, matchingWallets, selectedWalletId]);
+  }, [activeCurrency, linkedCryptoWallets, selectedWalletId]);
 
   // Modal state for linking a new wallet
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [modalCurrency, setModalCurrency] = useState<CurrencyType>('BTC');
   const [newWalletLabel, setNewWalletLabel] = useState("");
   const [newWalletAddress, setNewWalletAddress] = useState("");
   const [linkError, setLinkError] = useState<string | null>(null);
 
-  const selectedWallet = matchingWallets.find((w) => w.id === selectedWalletId);
+  const selectedWallet = linkedCryptoWallets.find((w) => w.id === selectedWalletId);
+  const withdrawCurrency: CurrencyType = selectedWallet
+    ? selectedWallet.currency
+    : (activeCurrency === 'ETH' || activeCurrency === 'SOL' ? activeCurrency : 'BTC');
+  const availableCrypto = getBalance(withdrawCurrency);
+
+  const handleOpenLinkModal = () => {
+    setModalCurrency(activeCurrency === 'ETH' || activeCurrency === 'SOL' ? activeCurrency : 'BTC');
+    setNewWalletLabel("");
+    setNewWalletAddress("");
+    setLinkError(null);
+    setIsLinkModalOpen(true);
+  };
 
   // 2FA Auto-focus logic
   const handleOtpChange = (index: number, value: string) => {
@@ -100,7 +110,7 @@ export default function WithdrawPage() {
   const handleWithdraw = () => {
     if (!selectedWallet) return;
     const result = withdrawFunds(
-      activeCurrency, 
+      withdrawCurrency, 
       parseFloat(withdrawAmount), 
       selectedWallet.address
     );
@@ -116,15 +126,15 @@ export default function WithdrawPage() {
   const handleSaveLinkedWallet = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newWalletLabel.trim()) {
-      setLinkError("Please provide a recognizable label for this account.");
+      setLinkError("Please provide a recognizable label for this wallet.");
       return;
     }
     if (!newWalletAddress.trim() || newWalletAddress.trim().length < 6) {
-      setLinkError("Please enter a valid destination address or account number.");
+      setLinkError("Please enter a valid destination wallet address.");
       return;
     }
 
-    const created = addLinkedWallet(activeCurrency, newWalletLabel.trim(), newWalletAddress.trim());
+    const created = addLinkedWallet(modalCurrency, newWalletLabel.trim(), newWalletAddress.trim());
 
     try {
       const supabase = createClient();
@@ -135,7 +145,7 @@ export default function WithdrawPage() {
           .insert({
             id: created.id,
             user_id: authUser.id,
-            currency: activeCurrency,
+            currency: modalCurrency,
             label: newWalletLabel.trim(),
             address: newWalletAddress.trim(),
             is_default: created.isDefault,
@@ -152,8 +162,6 @@ export default function WithdrawPage() {
     setLinkError(null);
     setIsLinkModalOpen(false);
   };
-
-  const isFiat = activeCurrency === 'USD' || activeCurrency === 'GBP';
 
   return (
     <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
@@ -186,7 +194,7 @@ export default function WithdrawPage() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-forge-gray-500 font-bold text-lg">
-                  {activeCurrency}
+                  {withdrawCurrency}
                 </div>
                 <input 
                   type="number" 
@@ -199,7 +207,7 @@ export default function WithdrawPage() {
               </div>
               <div className="flex justify-between items-center mt-3">
                 <p className="text-xs font-bold text-forge-gray-500 tabular-nums">
-                  Available Balance: <strong className="text-forge-gray-800" suppressHydrationWarning>{isHydrated ? formatCrypto(availableCrypto, activeCurrency) : "..."}</strong>
+                  Available Balance: <strong className="text-forge-gray-800" suppressHydrationWarning>{isHydrated ? formatCrypto(availableCrypto, withdrawCurrency) : "..."}</strong>
                 </p>
                 <button 
                   type="button"
@@ -211,78 +219,47 @@ export default function WithdrawPage() {
               </div>
             </div>
 
-            {/* Destination Account Selection */}
+            {/* Destination Wallet Selection */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <label className="block text-xs font-bold uppercase tracking-wider text-forge-gray-600" suppressHydrationWarning>
-                  Designated Destination Account ({isHydrated ? activeCurrency : 'USD'})
+                <label className="block text-xs font-bold uppercase tracking-wider text-forge-gray-600">
+                  Designated Destination Wallet
                 </label>
                 <button
                   type="button"
-                  onClick={() => {
-                    setLinkError(null);
-                    setIsLinkModalOpen(true);
-                  }}
+                  onClick={handleOpenLinkModal}
                   className="inline-flex items-center gap-1 text-xs font-bold text-forge-orange hover:text-forge-orange-hover"
                 >
-                  <Plus size={14} /> Link New Account
+                  <Plus size={14} /> Link New Wallet
                 </button>
               </div>
 
-              {(!currentUser?.linkedWallets || currentUser.linkedWallets.length === 0) ? (
+              {linkedCryptoWallets.length === 0 ? (
                 /* Empty state: No linked wallets */
                 <div className="p-6 border-2 border-dashed border-forge-gray-200 bg-forge-gray-50/50 rounded-2xl text-center space-y-3">
                   <div className="w-12 h-12 rounded-xl bg-forge-gray-100 flex items-center justify-center text-forge-gray-400 mx-auto">
-                    {isFiat ? <Building2 size={24} /> : <Wallet size={24} />}
+                    <Wallet size={24} />
                   </div>
                   <div>
                     <p className="text-sm font-bold text-forge-gray-900">
-                      No destination accounts linked yet. Click &apos;+ Link Account&apos; to register your withdrawal address.
+                      No destination wallets linked yet. Click &apos;+ Link Wallet&apos; to register your withdrawal address.
                     </p>
                     <p className="text-xs text-forge-gray-500 mt-0.5 max-w-sm mx-auto">
-                      Add your personal {isFiat ? "bank account" : `${activeCurrency} wallet`} to receive payouts and capital distributions.
+                      Add your personal crypto wallet (BTC, ETH, SOL) to receive payouts and capital distributions.
                     </p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      setLinkError(null);
-                      setIsLinkModalOpen(true);
-                    }}
+                    onClick={handleOpenLinkModal}
                     className="inline-flex items-center gap-2 px-4 py-2.5 bg-forge-gray-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-colors shadow-sm"
                   >
-                    <Plus size={14} /> Link Account
-                  </button>
-                </div>
-              ) : matchingWallets.length === 0 ? (
-                /* Empty state: No matching linked wallets */
-                <div className="p-6 border-2 border-dashed border-forge-gray-200 bg-forge-gray-50/50 rounded-2xl text-center space-y-3">
-                  <div className="w-12 h-12 rounded-xl bg-forge-gray-100 flex items-center justify-center text-forge-gray-400 mx-auto">
-                    {isFiat ? <Building2 size={24} /> : <Wallet size={24} />}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-forge-gray-900">
-                      No {activeCurrency} Destination Account Linked
-                    </p>
-                    <p className="text-xs text-forge-gray-500 mt-0.5 max-w-sm mx-auto">
-                      Link your personal {isFiat ? "bank account (IBAN/Wire)" : `${activeCurrency} wallet address`} to receive your funds safely.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLinkError(null);
-                      setIsLinkModalOpen(true);
-                    }}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-forge-gray-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-colors shadow-sm"
-                  >
-                    <Plus size={14} /> Link {activeCurrency} Destination Wallet
+                    <Plus size={14} /> Link Wallet
                   </button>
                 </div>
               ) : (
-                /* List of matching linked accounts */
+                /* List of matching linked wallets */
                 <div className="space-y-3">
-                  {matchingWallets.map((wallet) => {
+                  {linkedCryptoWallets.map((wallet) => {
                     const isSelected = wallet.id === selectedWalletId;
                     return (
                       <div
@@ -300,13 +277,16 @@ export default function WithdrawPage() {
                               ? "bg-forge-orange text-white" 
                               : "bg-forge-gray-100 text-forge-gray-600 border border-forge-gray-200"
                           }`}>
-                            {isFiat ? <Building2 size={20} /> : <Wallet size={20} />}
+                            <Wallet size={20} />
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <p className="font-bold text-sm text-forge-gray-900 truncate">
                                 {wallet.label}
                               </p>
+                              <span className="text-[10px] font-bold px-2 py-0.5 bg-forge-orange-wash text-forge-orange rounded uppercase tracking-wider">
+                                {wallet.currency}
+                              </span>
                               {wallet.isDefault && (
                                 <span className="text-[10px] font-bold px-2 py-0.5 bg-forge-gray-100 text-forge-gray-600 rounded">
                                   Default
@@ -351,9 +331,9 @@ export default function WithdrawPage() {
                 Continue to Verification
               </button>
 
-              {!selectedWalletId && matchingWallets.length === 0 && (
+              {!selectedWalletId && linkedCryptoWallets.length === 0 && (
                 <p className="text-xs text-center text-forge-gray-500 mt-2 font-medium">
-                  Please link a destination address above to proceed with withdrawal.
+                  Please link a destination wallet above to proceed with withdrawal.
                 </p>
               )}
             </div>
@@ -379,12 +359,12 @@ export default function WithdrawPage() {
                 <div className="flex justify-between items-center">
                   <span className="text-forge-gray-500 font-medium">Payout Amount:</span>
                   <span className="font-display font-bold text-base text-forge-gray-900 tabular-nums">
-                    {formatCrypto(parseFloat(withdrawAmount) || 0, activeCurrency)}
+                    {formatCrypto(parseFloat(withdrawAmount) || 0, withdrawCurrency)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-forge-gray-500 font-medium">Destination Account:</span>
-                  <span className="font-bold text-forge-gray-900">{selectedWallet.label}</span>
+                  <span className="text-forge-gray-500 font-medium">Destination Wallet:</span>
+                  <span className="font-bold text-forge-gray-900">{selectedWallet.label} ({selectedWallet.currency})</span>
                 </div>
                 <div className="flex justify-between items-center pt-1 border-t border-forge-gray-200">
                   <span className="text-forge-gray-500 font-medium">Target Address:</span>
@@ -426,14 +406,14 @@ export default function WithdrawPage() {
                 onClick={() => setStep(1)} 
                 className="text-xs font-bold text-forge-gray-500 hover:text-forge-gray-900 transition-colors py-2"
               >
-                ← Back to Amount & Account
+                ← Back to Amount & Wallet
               </button>
             </div>
           </div>
         )}
       </div>
 
-      {/* ── Link New Destination Account Modal ── */}
+      {/* ── Link New Destination Wallet Modal ── */}
       {isLinkModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-forge-gray-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div 
@@ -449,10 +429,10 @@ export default function WithdrawPage() {
                 </div>
                 <div>
                   <h3 className="font-display font-bold text-xl text-forge-gray-900">
-                    Link Destination Account
+                    Link Destination Wallet
                   </h3>
                   <p className="text-xs text-forge-gray-500">
-                    Target currency: <strong className="text-forge-gray-900">{activeCurrency}</strong>
+                    Authorize an external crypto wallet for payouts
                   </p>
                 </div>
               </div>
@@ -475,31 +455,53 @@ export default function WithdrawPage() {
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-forge-gray-700 mb-1.5">
-                  Account / Wallet Label
+                  Asset / Currency
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {CRYPTO_CURRENCIES.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setModalCurrency(c)}
+                      className={`py-2.5 text-xs font-bold rounded-lg border transition-all ${
+                        modalCurrency === c
+                          ? "bg-forge-orange text-white border-forge-orange shadow-sm"
+                          : "bg-forge-gray-50 text-forge-gray-700 border-forge-gray-200 hover:bg-forge-gray-100"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-forge-gray-700 mb-1.5">
+                  WALLET LABEL
                 </label>
                 <input
                   type="text"
                   required
                   value={newWalletLabel}
                   onChange={(e) => setNewWalletLabel(e.target.value)}
-                  placeholder={isFiat ? "e.g. Personal Chase Checking" : `e.g. Ledger Cold Storage (${activeCurrency})`}
+                  placeholder="e.g. Ledger Cold Vault, MetaMask, Phantom"
                   className="w-full bg-forge-gray-50 border border-forge-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-forge-gray-900 focus:outline-none focus:ring-2 focus:ring-forge-orange focus:bg-white"
                 />
                 <p className="text-[11px] text-forge-gray-400 mt-1">
-                  A personalized label to recognize this account for future payouts.
+                  A personalized label to recognize this wallet for future payouts.
                 </p>
               </div>
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-forge-gray-700 mb-1.5">
-                  Destination Address / IBAN / Account
+                  DESTINATION WALLET ADDRESS
                 </label>
                 <input
                   type="text"
                   required
                   value={newWalletAddress}
                   onChange={(e) => setNewWalletAddress(e.target.value)}
-                  placeholder={isFiat ? "e.g. GB29X... or Routing & Account #" : `e.g. 0x... or bc1q...`}
+                  placeholder="e.g. 0x... / bc1q... / 7xKX..."
                   className="w-full bg-forge-gray-50 border border-forge-gray-200 rounded-xl px-4 py-3 text-sm font-mono font-semibold text-forge-gray-900 focus:outline-none focus:ring-2 focus:ring-forge-orange focus:bg-white"
                 />
                 <p className="text-[11px] text-forge-gray-400 mt-1">
@@ -519,7 +521,7 @@ export default function WithdrawPage() {
                   type="submit"
                   className="px-5 py-2.5 bg-forge-orange text-white text-xs font-bold rounded-xl hover:bg-forge-orange-hover transition-colors shadow-sm"
                 >
-                  Save & Use Destination
+                  Save Wallet
                 </button>
               </div>
             </form>
