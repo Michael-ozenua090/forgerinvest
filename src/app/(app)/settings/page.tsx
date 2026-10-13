@@ -1,10 +1,48 @@
 "use client";
 
+import { useRef } from "react";
 import { useStore } from "@/lib/store";
-import { CheckCircle2, Shield, User as UserIcon, Lock, Bell, Key } from "lucide-react";
+import { 
+  CheckCircle2, 
+  Shield, 
+  User as UserIcon, 
+  Lock, 
+  Camera, 
+  Trash2, 
+  Upload 
+} from "lucide-react";
 
 export default function SettingsPage() {
-  const { user, isKycCompleted } = useStore();
+  const { user, currentUser, isKycCompleted, updateUserAvatar, setToast } = useStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const currentAvatar = currentUser?.avatar || user.avatar;
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setToast("Please upload a valid image file (PNG, JPG, or WebP).");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setToast("Image size must be smaller than 5MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        updateUserAvatar(result);
+      }
+    };
+    reader.readAsDataURL(file);
+    // Reset file input value so user can upload same photo again if desired
+    e.target.value = "";
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl">
@@ -19,14 +57,71 @@ export default function SettingsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* User Profile */}
-        <div className="clean-card bg-white p-6 rounded-2xl border border-forge-gray-200 shadow-sm space-y-4">
+        <div className="clean-card bg-white p-6 rounded-2xl border border-forge-gray-200 shadow-sm space-y-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-forge-gray-50 flex items-center justify-center text-forge-gray-600">
               <UserIcon size={20} />
             </div>
-            <h2 className="font-bold text-forge-gray-900">User Profile</h2>
+            <div>
+              <h2 className="font-bold text-forge-gray-900">User Profile</h2>
+              <p className="text-xs text-forge-gray-500">Personal identity and avatar</p>
+            </div>
           </div>
-          <div className="space-y-3">
+
+          {/* Interactive Profile Avatar Uploader */}
+          <div className="flex items-center gap-5 p-4 bg-forge-gray-50/70 rounded-2xl border border-forge-gray-200">
+            {/* Avatar Circle */}
+            <div className="w-20 h-20 rounded-full border-2 border-white shadow-md overflow-hidden relative shrink-0 bg-forge-gray-900 flex items-center justify-center">
+              {currentAvatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={currentAvatar}
+                  alt={user.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="font-display font-extrabold text-2xl text-white uppercase">
+                  {user.name.split(" ").map((n) => n[0]).join("")}
+                </span>
+              )}
+            </div>
+
+            {/* Upload Buttons & Guidance */}
+            <div className="space-y-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarFileChange}
+                className="hidden"
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3.5 py-1.5 bg-forge-orange hover:bg-forge-orange-hover text-white text-xs font-bold rounded-xl transition-colors shadow-sm flex items-center gap-1.5"
+                >
+                  <Camera size={14} />
+                  <span>{currentAvatar ? "Change Photo" : "Upload Photo"}</span>
+                </button>
+                {currentAvatar && (
+                  <button
+                    type="button"
+                    onClick={() => updateUserAvatar(null)}
+                    className="px-3 py-1.5 bg-white hover:bg-forge-gray-100 border border-forge-gray-200 text-forge-gray-600 hover:text-market-down text-xs font-bold rounded-xl transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 size={13} />
+                    <span>Remove</span>
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] text-forge-gray-400">
+                Recommended: Square image, max 5MB (PNG, JPG, WebP).
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3 pt-1">
             <div>
               <p className="text-xs font-bold text-forge-gray-400 uppercase tracking-wider">Account Holder</p>
               <p className="font-semibold text-forge-gray-900">{user.name}</p>

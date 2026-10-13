@@ -24,13 +24,13 @@ export default function DashboardPage() {
     user, 
     savingsPlans, 
     transactions, 
-    cryptoBalances, 
+    getBalance, 
     activeCurrency, 
     liveRates, 
     setDepositModalOpen 
   } = useStore();
   
-  const availableCrypto = cryptoBalances[activeCurrency] ?? 0;
+  const availableCrypto = getBalance(activeCurrency);
 
   // Active & matured plan stats
   const activePlans = savingsPlans.filter((p) => p.status === "ACTIVE");

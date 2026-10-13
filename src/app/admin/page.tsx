@@ -32,12 +32,16 @@ import {
   Filter,
   DollarSign,
   Building2,
-  Plus
+  Plus,
+  Bell,
+  Send,
+  Sparkles
 } from "lucide-react";
 import { useStore, UserAccount, Transaction, LinkedWallet } from "@/lib/store";
 import { 
   CurrencyType, 
   convertCryptoToFiat, 
+  convertFiatToCrypto,
   formatCrypto, 
   formatFiat 
 } from "@/lib/format";
@@ -45,15 +49,15 @@ import { ROUTES } from "@/lib/routes";
 
 const ALL_CURRENCIES: CurrencyType[] = ['USD', 'GBP', 'BTC', 'ETH', 'SOL'];
 
-type AdminTab = 'USERS' | 'KYC' | 'DEPOSITS' | 'LEDGER';
+type AdminTab = 'USERS' | 'KYC' | 'DEPOSITS' | 'LEDGER' | 'NOTIFICATIONS';
 
 export default function AdminPage() {
   const { 
     users,
     currentUser,
-    cryptoBalances, 
     savingsPlans, 
     transactions, 
+    notifications,
     liveRates,
     approveDeposit, 
     rejectDeposit, 
@@ -63,7 +67,9 @@ export default function AdminPage() {
     adminToggleSuspension,
     adminUpdateUserBalance,
     adminApproveKyc,
-    adminRejectKyc
+    adminRejectKyc,
+    adminPushNotification,
+    setToast
   } = useStore();
 
   // Active Main Tab
@@ -83,10 +89,10 @@ export default function AdminPage() {
   const [editUserName, setEditUserName] = useState("");
   const [editUserEmail, setEditUserEmail] = useState("");
 
+  // Single Unified Balance Adjustment Modal State
   const [balancesUser, setBalancesUser] = useState<UserAccount | null>(null);
-  const [balanceEdits, setBalanceEdits] = useState<Record<CurrencyType, number>>({
-    USD: 0, GBP: 0, BTC: 0, ETH: 0, SOL: 0
-  });
+  const [balanceCurrency, setBalanceCurrency] = useState<CurrencyType>('USD');
+  const [balanceAmount, setBalanceAmount] = useState<string>('');
 
   const [tempPasswordResult, setTempPasswordResult] = useState<{ user: UserAccount; tempPass: string } | null>(null);
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<UserAccount | null>(null);
@@ -116,6 +122,13 @@ export default function AdminPage() {
   const [ledgerSearch, setLedgerSearch] = useState("");
 
   // ─────────────────────────────────────────────────────────────
+  // TAB 5: BROADCAST & PUSH NOTIFICATIONS STATE
+  // ─────────────────────────────────────────────────────────────
+  const [pushRecipient, setPushRecipient] = useState<string>('ALL');
+  const [pushMessage, setPushMessage] = useState<string>('');
+  const [pushSentSuccess, setPushSentSuccess] = useState<boolean>(false);
+
+  // ─────────────────────────────────────────────────────────────
   // COMPUTED VALUES
   // ─────────────────────────────────────────────────────────────
   const pendingDeposits = transactions.filter(
@@ -128,12 +141,8 @@ export default function AdminPage() {
     return acc + convertCryptoToFiat(tx.amount, tx.currency, liveRates);
   }, 0);
 
-  const totalSystemValueUsd = users.reduce((acc, u) => {
-    return acc + ALL_CURRENCIES.reduce((currAcc, curr) => {
-      const bal = u.balances?.[curr] ?? 0;
-      return currAcc + convertCryptoToFiat(bal, curr, liveRates);
-    }, 0);
-  }, 0);
+  // Single unified balance sum across all users
+  const totalSystemValueUsd = users.reduce((acc, u) => acc + (u.baseBalanceUSD || 0), 0);
 
   // Filtered Users
   const filteredUsers = users.filter((u) => {
@@ -191,21 +200,16 @@ export default function AdminPage() {
 
   const handleOpenBalances = (user: UserAccount) => {
     setBalancesUser(user);
-    setBalanceEdits({
-      USD: user.balances?.USD ?? 0,
-      GBP: user.balances?.GBP ?? 0,
-      BTC: user.balances?.BTC ?? 0,
-      ETH: user.balances?.ETH ?? 0,
-      SOL: user.balances?.SOL ?? 0,
-    });
+    setBalanceCurrency('USD');
+    setBalanceAmount((user.baseBalanceUSD || 0).toString());
   };
 
   const handleSaveBalances = (e: React.FormEvent) => {
     e.preventDefault();
     if (!balancesUser) return;
-    ALL_CURRENCIES.forEach((c) => {
-      adminUpdateUserBalance(balancesUser.id, c, balanceEdits[c] || 0);
-    });
+    const num = parseFloat(balanceAmount);
+    if (isNaN(num) || num < 0) return;
+    adminUpdateUserBalance(balancesUser.id, balanceCurrency, num);
     setBalancesUser(null);
   };
 
@@ -244,6 +248,16 @@ export default function AdminPage() {
     rejectDeposit(rejectDepositTx.id, depositRejectReason.trim() || undefined);
     setRejectDepositTx(null);
     setDepositRejectReason("");
+  };
+
+  // Push Notification Handler
+  const handleSendPushNotification = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pushMessage.trim()) return;
+    adminPushNotification(pushRecipient, pushMessage.trim());
+    setPushMessage("");
+    setPushSentSuccess(true);
+    setTimeout(() => setPushSentSuccess(false), 4000);
   };
 
   return (
@@ -291,7 +305,7 @@ export default function AdminPage() {
               Administrative Command Center
             </h1>
             <p className="font-medium text-forge-gray-600 mt-1 text-sm sm:text-base">
-              Comprehensive control over registered users, compliance KYC approvals, deposit proof receipts, and financial audit logs.
+              Comprehensive control over registered users, compliance KYC approvals, deposit proof receipts, unified balances, and announcements.
             </p>
           </div>
 
@@ -372,7 +386,7 @@ export default function AdminPage() {
               {formatFiat(totalSystemValueUsd)}
             </div>
             <p className="text-xs font-medium text-forge-gray-500 mt-1">
-              Aggregate balances across all accounts
+              Unified single balance across all client vaults
             </p>
           </div>
         </div>
@@ -384,6 +398,7 @@ export default function AdminPage() {
             { id: 'KYC' as AdminTab, label: 'KYC Approval Queue', icon: UserCheck, badge: pendingKycUsers.length, badgeAlert: pendingKycUsers.length > 0 },
             { id: 'DEPOSITS' as AdminTab, label: 'Deposit Proofs Queue', icon: ArrowDownToLine, badge: pendingDeposits.length, badgeAlert: pendingDeposits.length > 0 },
             { id: 'LEDGER' as AdminTab, label: 'Transactions & Audit Ledger', icon: FileText },
+            { id: 'NOTIFICATIONS' as AdminTab, label: 'Push Notifications & Alerts', icon: Bell },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -427,7 +442,7 @@ export default function AdminPage() {
                   Registered User Accounts
                 </h2>
                 <p className="text-xs font-medium text-forge-gray-500 mt-0.5">
-                  Inspect user records, adjust account balances, reset passwords, suspend, or view transaction audit logs.
+                  Inspect user records, adjust unified balances, reset passwords, suspend, or view transaction audit logs.
                 </p>
               </div>
 
@@ -470,6 +485,16 @@ export default function AdminPage() {
                     </button>
                   ))}
                 </div>
+
+                {/* Quick Broadcast Button */}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('NOTIFICATIONS')}
+                  className="px-3 py-1.5 bg-forge-orange text-white text-xs font-bold rounded-xl hover:bg-forge-orange-hover transition-colors flex items-center gap-1.5 shadow-sm"
+                >
+                  <Bell size={13} />
+                  <span>Broadcast Alert</span>
+                </button>
               </div>
             </div>
 
@@ -488,26 +513,34 @@ export default function AdminPage() {
                       <th className="py-4 px-6">User Account</th>
                       <th className="py-4 px-6">Status</th>
                       <th className="py-4 px-6">KYC Status</th>
-                      <th className="py-4 px-6">Balances Overview</th>
+                      <th className="py-4 px-6">Unified Balance</th>
                       <th className="py-4 px-6">Linked Wallets</th>
                       <th className="py-4 px-6 text-right">Admin Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-forge-gray-100 font-medium">
                     {filteredUsers.map((user) => {
-                      const userTotalUsd = ALL_CURRENCIES.reduce((acc, c) => {
-                        const bal = user.balances?.[c] ?? 0;
-                        return acc + convertCryptoToFiat(bal, c, liveRates);
-                      }, 0);
+                      const userTotalUsd = user.baseBalanceUSD || 0;
 
                       return (
                         <tr key={user.id} className="hover:bg-forge-gray-50/50 transition-colors">
-                          {/* Name & ID */}
+                          {/* Name, Avatar & ID */}
                           <td className="py-4 px-6">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-forge-gray-900 text-white font-bold text-sm flex items-center justify-center shrink-0">
-                                {user.name.split(" ").map(n => n[0]).join("")}
-                              </div>
+                              {user.avatar ? (
+                                <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-forge-gray-200 shadow-sm">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img 
+                                    src={user.avatar} 
+                                    alt={user.name} 
+                                    className="w-full h-full object-cover" 
+                                  />
+                                </div>
+                              ) : (
+                                <div className="w-10 h-10 rounded-xl bg-forge-gray-900 text-white font-bold text-sm flex items-center justify-center shrink-0">
+                                  {user.name.split(" ").map(n => n[0]).join("")}
+                                </div>
+                              )}
                               <div>
                                 <div className="flex items-center gap-2">
                                   <p className="font-bold text-sm text-forge-gray-900">{user.name}</p>
@@ -577,17 +610,15 @@ export default function AdminPage() {
                             )}
                           </td>
 
-                          {/* Balances */}
+                          {/* Unified Single Balance */}
                           <td className="py-4 px-6">
                             <span className="font-display font-bold text-sm text-forge-gray-900 tabular-nums">
-                              {formatFiat(userTotalUsd)}
+                              {formatFiat(userTotalUsd)} USD
                             </span>
                             <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono text-forge-gray-500 mt-0.5">
-                              <span>${user.balances?.USD ?? 0}</span>
+                              <span>{convertFiatToCrypto(userTotalUsd, 'BTC', liveRates).toFixed(5)} BTC</span>
                               <span>•</span>
-                              <span>{user.balances?.BTC ?? 0} BTC</span>
-                              <span>•</span>
-                              <span>{user.balances?.ETH ?? 0} ETH</span>
+                              <span>{convertFiatToCrypto(userTotalUsd, 'ETH', liveRates).toFixed(4)} ETH</span>
                             </div>
                           </td>
 
@@ -611,7 +642,7 @@ export default function AdminPage() {
                                 type="button"
                                 onClick={() => handleOpenBalances(user)}
                                 className="p-2 text-forge-gray-600 hover:text-forge-orange hover:bg-forge-orange-wash rounded-lg transition-colors"
-                                title="Adjust Balances"
+                                title="Adjust Balance"
                               >
                                 <Sliders size={16} />
                               </button>
@@ -624,6 +655,19 @@ export default function AdminPage() {
                                 title="Edit User Profile"
                               >
                                 <Edit2 size={16} />
+                              </button>
+
+                              {/* Send Push Notification to this User */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPushRecipient(user.id);
+                                  setActiveTab('NOTIFICATIONS');
+                                }}
+                                className="p-2 text-forge-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                title="Send Push Notification"
+                              >
+                                <Bell size={16} />
                               </button>
 
                               {/* Reset Password */}
@@ -989,7 +1033,7 @@ export default function AdminPage() {
                               >
                                 <div className="w-12 h-12 relative bg-forge-gray-100 flex items-center justify-center">
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img
+                                  <img 
                                     src={tx.proofImage}
                                     alt="Proof thumbnail"
                                     className="w-full h-full object-cover group-hover:scale-110 transition-transform"
@@ -1209,6 +1253,139 @@ export default function AdminPage() {
           </section>
         )}
 
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* TAB 5: PUSH NOTIFICATIONS & BROADCASTS                          */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {activeTab === 'NOTIFICATIONS' && (
+          <section className="clean-card bg-white rounded-2xl border border-forge-gray-200 shadow-sm overflow-hidden p-6 sm:p-8 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-forge-gray-100 pb-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-forge-orange-wash text-forge-orange flex items-center justify-center">
+                    <Bell size={18} />
+                  </div>
+                  <h2 className="font-display font-bold text-xl text-forge-gray-900">
+                    Push Notifications & Announcements Dispatcher
+                  </h2>
+                </div>
+                <p className="text-xs font-medium text-forge-gray-500 mt-1">
+                  Transmit immediate high-priority alerts directly to user notification centers and active device sessions.
+                </p>
+              </div>
+
+              {pushSentSuccess && (
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-market-up/10 text-market-up text-xs font-bold border border-market-up/20 animate-in fade-in">
+                  <CheckCircle2 size={15} />
+                  <span>Notification broadcasted successfully!</span>
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleSendPushNotification} className="space-y-6 max-w-3xl">
+              {/* Recipient Selection */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-forge-gray-700 mb-2">
+                  Target Audience / Recipient
+                </label>
+                <select
+                  value={pushRecipient}
+                  onChange={(e) => setPushRecipient(e.target.value)}
+                  className="w-full bg-forge-gray-50 border border-forge-gray-200 rounded-xl px-4 py-3 text-sm font-bold text-forge-gray-900 focus:outline-none focus:ring-2 focus:ring-forge-orange focus:bg-white"
+                >
+                  <option value="ALL">📢 All Registered Users (Broadcast Announcement)</option>
+                  <optgroup label="Individual Client Accounts">
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        👤 {u.name} — {u.email} ({u.id})
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+                <p className="text-[11px] text-forge-gray-400 mt-1">
+                  Broadcasts trigger instant in-app alerts and light up the notification bell across all active member sessions.
+                </p>
+              </div>
+
+              {/* Quick Template Chips */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-forge-gray-700 mb-2">
+                  Quick Message Templates
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    "Platform maintenance scheduled for tonight at 23:00 UTC. System services will remain uninterrupted.",
+                    "Your withdrawal window has opened. Funds and interest yields are ready for release.",
+                    "New High-Yield Fixed Growth Plan launched: Lock capital for 12 months with +162% guaranteed return.",
+                    "Your identity documents have been processed. Identity verification has been approved.",
+                    "Compliance reminder: Please link your designated payout address before requesting disbursements.",
+                  ].map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setPushMessage(preset)}
+                      className="px-3 py-1.5 bg-forge-gray-100 hover:bg-forge-gray-200 text-forge-gray-700 rounded-lg text-xs font-medium transition-colors text-left"
+                    >
+                      {preset.slice(0, 48)}...
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Message Input */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-forge-gray-700 mb-2">
+                  Announcement / Notification Content
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={pushMessage}
+                  onChange={(e) => setPushMessage(e.target.value)}
+                  placeholder="Type notification or platform announcement..."
+                  className="w-full bg-forge-gray-50 border border-forge-gray-200 rounded-xl p-4 text-sm font-medium text-forge-gray-900 focus:outline-none focus:ring-2 focus:ring-forge-orange focus:bg-white placeholder:text-forge-gray-400"
+                />
+              </div>
+
+              {/* Submit CTA */}
+              <div className="pt-2 flex items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={!pushMessage.trim()}
+                  className="px-6 py-3.5 bg-forge-orange hover:bg-forge-orange-hover text-white text-sm font-bold rounded-xl transition-colors shadow-[0_4px_14px_rgba(255,90,0,0.25)] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Bell size={16} />
+                  <span>Send Notification</span>
+                </button>
+                <span className="text-xs text-forge-gray-500 font-medium">
+                  {pushRecipient === 'ALL' ? `Broadcasting to all ${users.length} members` : `Targeting 1 recipient`}
+                </span>
+              </div>
+            </form>
+
+            {/* Notification Center Preview */}
+            <div className="pt-6 border-t border-forge-gray-100 max-w-3xl">
+              <h3 className="font-display font-bold text-sm text-forge-gray-900 mb-3">
+                Live Notification Center Feed (Recent)
+              </h3>
+              {notifications.length === 0 ? (
+                <p className="text-xs text-forge-gray-400 italic">No notifications dispatched yet.</p>
+              ) : (
+                <div className="space-y-2.5 max-h-56 overflow-y-auto">
+                  {notifications.slice(0, 5).map((n) => (
+                    <div key={n.id} className="p-3.5 bg-forge-gray-50 rounded-xl border border-forge-gray-200 flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-forge-orange mt-1.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-forge-gray-900">{n.message}</p>
+                        <p className="text-[10px] text-forge-gray-400 mt-0.5">{new Date(n.timestamp).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
       </main>
 
       {/* ═══════════════════════════════════════════════════════════════ */}
@@ -1265,7 +1442,7 @@ export default function AdminPage() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* MODAL: MANAGE USER BALANCES                                     */}
+      {/* MODAL: MANAGE UNIFIED USER BALANCE                              */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       {balancesUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-forge-gray-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -1277,7 +1454,7 @@ export default function AdminPage() {
                   <Sliders size={20} />
                 </div>
                 <div>
-                  <h3 className="font-display font-bold text-xl text-forge-gray-900">Manage Balances</h3>
+                  <h3 className="font-display font-bold text-xl text-forge-gray-900">Manage Unified Balance</h3>
                   <p className="text-xs text-forge-gray-500">User: <strong className="text-forge-gray-900">{balancesUser.name}</strong> ({balancesUser.id})</p>
                 </div>
               </div>
@@ -1286,61 +1463,99 @@ export default function AdminPage() {
               </button>
             </div>
 
+            {/* Current Unified Balance Breakdown */}
+            <div className="p-4 bg-forge-gray-50 rounded-xl border border-forge-gray-200 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold uppercase tracking-wider text-forge-gray-500">Current Base Balance:</span>
+                <span className="font-display font-extrabold text-xl text-forge-gray-900 tabular-nums">
+                  {formatFiat(balancesUser.baseBalanceUSD || 0)} USD
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-forge-gray-200 text-[11px] font-mono text-forge-gray-600">
+                <span>≈ {convertFiatToCrypto(balancesUser.baseBalanceUSD || 0, 'BTC', liveRates).toFixed(5)} BTC</span>
+                <span>•</span>
+                <span>≈ {convertFiatToCrypto(balancesUser.baseBalanceUSD || 0, 'ETH', liveRates).toFixed(4)} ETH</span>
+                <span>•</span>
+                <span>≈ {convertFiatToCrypto(balancesUser.baseBalanceUSD || 0, 'SOL', liveRates).toFixed(2)} SOL</span>
+                <span>•</span>
+                <span>≈ £{convertFiatToCrypto(balancesUser.baseBalanceUSD || 0, 'GBP', liveRates).toFixed(2)} GBP</span>
+              </div>
+            </div>
+
             <form onSubmit={handleSaveBalances} className="space-y-4">
-              <div className="space-y-3">
-                {ALL_CURRENCIES.map((curr) => (
-                  <div key={curr} className="flex items-center justify-between gap-4 p-3 bg-forge-gray-50 rounded-xl border border-forge-gray-200">
-                    <div className="flex items-center gap-2 min-w-[70px]">
-                      <span className="font-bold text-sm text-forge-gray-900">{curr}</span>
-                    </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-forge-gray-700 mb-1.5">
+                  Select Currency for Entry
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {ALL_CURRENCIES.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => {
+                        setBalanceCurrency(c);
+                        setBalanceAmount(convertFiatToCrypto(balancesUser.baseBalanceUSD || 0, c, liveRates).toString());
+                      }}
+                      className={`py-2 text-xs font-bold rounded-lg border transition-all ${
+                        balanceCurrency === c
+                          ? "bg-forge-orange text-white border-forge-orange shadow-sm"
+                          : "bg-forge-gray-50 text-forge-gray-700 border-forge-gray-200 hover:bg-forge-gray-100"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-                    <div className="flex-1 max-w-[200px]">
-                      <input
-                        type="number"
-                        step="any"
-                        min="0"
-                        value={balanceEdits[curr]}
-                        onChange={(e) => {
-                          const val = parseFloat(e.target.value);
-                          setBalanceEdits({
-                            ...balanceEdits,
-                            [curr]: isNaN(val) ? 0 : val
-                          });
-                        }}
-                        className="w-full bg-white border border-forge-gray-200 rounded-lg px-3 py-1.5 text-right font-display font-bold text-sm text-forge-gray-900 tabular-nums focus:outline-none focus:ring-2 focus:ring-forge-orange"
-                      />
-                    </div>
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-forge-gray-700">
+                    New Exact Balance Amount ({balanceCurrency})
+                  </label>
+                  <span className="text-xs text-forge-gray-500 font-medium">
+                    Converts to: <strong className="text-forge-gray-900 tabular-nums">
+                      {formatFiat(convertCryptoToFiat(parseFloat(balanceAmount) || 0, balanceCurrency, liveRates))} USD
+                    </strong>
+                  </span>
+                </div>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  required
+                  value={balanceAmount}
+                  onChange={(e) => setBalanceAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full bg-forge-gray-50 border border-forge-gray-200 rounded-xl px-4 py-3 text-base font-display font-bold text-forge-gray-900 tabular-nums focus:outline-none focus:ring-2 focus:ring-forge-orange focus:bg-white"
+                />
+              </div>
 
-                    {/* Quick +100 / +1 buttons */}
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const increment = curr === 'BTC' ? 0.5 : curr === 'ETH' ? 1 : curr === 'SOL' ? 10 : 1000;
-                          setBalanceEdits({
-                            ...balanceEdits,
-                            [curr]: (balanceEdits[curr] || 0) + increment
-                          });
-                        }}
-                        className="px-2 py-1 bg-white hover:bg-forge-gray-100 border border-forge-gray-200 rounded text-[11px] font-bold text-forge-gray-700"
-                      >
-                        +{curr === 'BTC' ? '0.5' : curr === 'ETH' ? '1' : curr === 'SOL' ? '10' : '1K'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setBalanceEdits({
-                            ...balanceEdits,
-                            [curr]: 0
-                          });
-                        }}
-                        className="px-2 py-1 bg-white hover:bg-forge-gray-100 border border-forge-gray-200 rounded text-[11px] font-bold text-forge-gray-400 hover:text-market-down"
-                      >
-                        0
-                      </button>
-                    </div>
-                  </div>
-                ))}
+              {/* Quick Presets */}
+              <div className="pt-2">
+                <span className="text-[11px] font-bold text-forge-gray-400 uppercase tracking-wider block mb-2">Quick Presets:</span>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: "+1,000 USD", curr: 'USD' as CurrencyType, val: (balancesUser.baseBalanceUSD || 0) + 1000 },
+                    { label: "+10,000 USD", curr: 'USD' as CurrencyType, val: (balancesUser.baseBalanceUSD || 0) + 10000 },
+                    { label: "+0.5 BTC", curr: 'BTC' as CurrencyType, val: convertFiatToCrypto(balancesUser.baseBalanceUSD || 0, 'BTC', liveRates) + 0.5 },
+                    { label: "+2.5 ETH", curr: 'ETH' as CurrencyType, val: convertFiatToCrypto(balancesUser.baseBalanceUSD || 0, 'ETH', liveRates) + 2.5 },
+                    { label: "+25 SOL", curr: 'SOL' as CurrencyType, val: convertFiatToCrypto(balancesUser.baseBalanceUSD || 0, 'SOL', liveRates) + 25 },
+                    { label: "Set to 0", curr: 'USD' as CurrencyType, val: 0 },
+                  ].map((p, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setBalanceCurrency(p.curr);
+                        setBalanceAmount(p.val.toString());
+                      }}
+                      className="px-2.5 py-1 bg-forge-gray-100 hover:bg-forge-gray-200 text-forge-gray-700 text-xs font-bold rounded-md transition-colors"
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="pt-4 flex items-center justify-end gap-3 border-t border-forge-gray-100">
@@ -1348,7 +1563,7 @@ export default function AdminPage() {
                   Cancel
                 </button>
                 <button type="submit" className="px-5 py-2.5 bg-forge-gray-900 text-white text-xs font-bold rounded-xl hover:bg-black transition-colors shadow-sm">
-                  Save All Balances
+                  Save & Update Balance
                 </button>
               </div>
             </form>
@@ -1443,9 +1658,20 @@ export default function AdminPage() {
             
             <div className="flex items-center justify-between border-b border-forge-gray-100 pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-forge-gray-900 text-white font-bold text-base flex items-center justify-center">
-                  {auditUser.name.split(" ").map(n => n[0]).join("")}
-                </div>
+                {auditUser.avatar ? (
+                  <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-forge-gray-200 shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
+                      src={auditUser.avatar} 
+                      alt={auditUser.name} 
+                      className="w-full h-full object-cover" 
+                    />
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-forge-gray-900 text-white font-bold text-base flex items-center justify-center">
+                    {auditUser.name.split(" ").map(n => n[0]).join("")}
+                  </div>
+                )}
                 <div>
                   <h3 className="font-display font-bold text-xl text-forge-gray-900">{auditUser.name}</h3>
                   <p className="text-xs text-forge-gray-500">{auditUser.email} • ID: {auditUser.id}</p>
@@ -1467,9 +1693,12 @@ export default function AdminPage() {
                 <p className="font-bold text-sm text-forge-gray-900 capitalize mt-0.5">{auditUser.kycStatus}</p>
               </div>
               <div className="p-3 bg-forge-gray-50 rounded-xl border border-forge-gray-200 col-span-2">
-                <span className="text-[10px] font-bold uppercase text-forge-gray-500">Balances</span>
-                <p className="font-mono text-xs text-forge-gray-800 mt-0.5">
-                  ${auditUser.balances?.USD ?? 0} | {auditUser.balances?.BTC ?? 0} BTC | {auditUser.balances?.ETH ?? 0} ETH
+                <span className="text-[10px] font-bold uppercase text-forge-gray-500">Unified Balance</span>
+                <p className="font-display font-extrabold text-base text-forge-gray-900 mt-0.5">
+                  {formatFiat(auditUser.baseBalanceUSD || 0)} USD
+                </p>
+                <p className="text-[10px] font-mono text-forge-gray-500">
+                  ≈ {convertFiatToCrypto(auditUser.baseBalanceUSD || 0, 'BTC', liveRates).toFixed(5)} BTC • {convertFiatToCrypto(auditUser.baseBalanceUSD || 0, 'ETH', liveRates).toFixed(4)} ETH
                 </p>
               </div>
             </div>
@@ -1786,7 +2015,7 @@ export default function AdminPage() {
 
             <div className="p-4 overflow-y-auto flex-1 bg-forge-gray-100 flex items-center justify-center">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <img 
                 src={previewImage.src}
                 alt="Full size screenshot proof"
                 className="max-h-[70vh] w-auto object-contain rounded-xl shadow-lg border border-forge-gray-300"

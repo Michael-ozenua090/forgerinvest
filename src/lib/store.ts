@@ -6,7 +6,8 @@ import {
   PLAN_CONFIG, 
   DEFAULT_RATES, 
   convertCryptoToFiat, 
-  convertFiatToCrypto 
+  convertFiatToCrypto,
+  formatCrypto 
 } from './format';
 
 export type { CurrencyType, PlanDurationMonths };
@@ -27,7 +28,8 @@ export interface UserAccount {
   role: 'user' | 'admin';
   status: 'active' | 'suspended';
   createdAt: string;
-  balances: Record<CurrencyType, number>;
+  baseBalanceUSD: number; // Unified single balance stored in USD
+  avatar?: string; // Base64 data URL
   kycStatus: 'unverified' | 'pending' | 'verified' | 'rejected';
   kycData?: {
     firstName: string;
@@ -46,11 +48,13 @@ export interface UserAccount {
     rejectionReason?: string;
   };
   linkedWallets: LinkedWallet[];
+  notifications?: Notification[];
 }
 
 export interface User {
   name: string;
   email: string;
+  avatar?: string;
   isVerified: boolean;
   kycStatus: "pending" | "verified" | "unverified" | "rejected";
 }
@@ -98,13 +102,15 @@ export interface AppState {
   isKycCompleted: boolean;
   activeCurrency: CurrencyType;
   liveRates: Record<CurrencyType, number>;
-  cryptoBalances: Record<CurrencyType, number>;
+  baseBalanceUSD: number; // Unified single balance
+  cryptoBalances: Record<CurrencyType, number>; // Live converted representation of baseBalanceUSD
   savingsPlans: SavingsPlan[];
   transactions: Transaction[];
   notifications: Notification[];
   toastMessage: string | null;
   isDepositModalOpen: boolean;
 
+  getBalance: (currency: CurrencyType) => number;
   fetchRates: () => Promise<void>;
   setDepositModalOpen: (isOpen: boolean) => void;
   setCurrency: (currency: CurrencyType) => void;
@@ -133,6 +139,12 @@ export interface AppState {
   setToast: (msg: string | null) => void;
   markNotificationsAsRead: () => void;
 
+  // Profile Avatar Action
+  updateUserAvatar: (avatarBase64: string | null) => void;
+
+  // Admin Broadcast / Push Notification Action
+  adminPushNotification: (recipientId: 'ALL' | string, message: string) => void;
+
   // Destination Wallet Linking Actions
   addLinkedWallet: (currency: CurrencyType, label: string, address: string) => LinkedWallet;
   removeLinkedWallet: (walletId: string) => void;
@@ -149,6 +161,14 @@ export interface AppState {
   adminRejectKyc: (userId: string, reason: string) => void;
 }
 
+const computeBalances = (baseUSD: number, rates: Record<CurrencyType, number>): Record<CurrencyType, number> => ({
+  USD: baseUSD,
+  GBP: convertFiatToCrypto(baseUSD, 'GBP', rates),
+  BTC: convertFiatToCrypto(baseUSD, 'BTC', rates),
+  ETH: convertFiatToCrypto(baseUSD, 'ETH', rates),
+  SOL: convertFiatToCrypto(baseUSD, 'SOL', rates),
+});
+
 const INITIAL_USERS: UserAccount[] = [
   {
     id: "USR-849204",
@@ -157,13 +177,8 @@ const INITIAL_USERS: UserAccount[] = [
     role: "user",
     status: "active",
     createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-    balances: {
-      BTC: 0,
-      ETH: 0,
-      SOL: 0,
-      USD: 0,
-      GBP: 0,
-    },
+    baseBalanceUSD: 0,
+    avatar: undefined,
     kycStatus: "pending",
     kycData: {
       firstName: "Misha",
@@ -206,6 +221,7 @@ const INITIAL_USERS: UserAccount[] = [
         createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
       },
     ],
+    notifications: [],
   },
   {
     id: "USR-102941",
@@ -214,15 +230,11 @@ const INITIAL_USERS: UserAccount[] = [
     role: "user",
     status: "active",
     createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-    balances: {
-      BTC: 0,
-      ETH: 0,
-      SOL: 0,
-      USD: 0,
-      GBP: 0,
-    },
+    baseBalanceUSD: 0,
+    avatar: undefined,
     kycStatus: "unverified",
     linkedWallets: [],
+    notifications: [],
   },
 ];
 
@@ -234,56 +246,64 @@ export const useStore = create<AppState>()(
       user: {
         name: INITIAL_USERS[0].name,
         email: INITIAL_USERS[0].email,
+        avatar: undefined,
         isVerified: false,
         kycStatus: "pending",
       },
-      isKycCompleted: false, // Intentional KYC friction gate: starts false to trigger the withdrawal gate
+      isKycCompleted: false, // Intentional KYC friction gate: starts false to trigger withdrawal gate
       activeCurrency: 'USD',
       liveRates: DEFAULT_RATES,
-      cryptoBalances: INITIAL_USERS[0].balances,
+      baseBalanceUSD: 0,
+      cryptoBalances: computeBalances(0, DEFAULT_RATES),
       savingsPlans: [],
       transactions: [],
       notifications: [],
       toastMessage: null,
       isDepositModalOpen: false,
 
+      getBalance: (currency) => {
+        const state = get();
+        return convertFiatToCrypto(state.baseBalanceUSD, currency, state.liveRates);
+      },
+
       fetchRates: async () => {
         try {
-          const res = await fetch("/api/rates");
+          const res = await fetch('/api/rates');
           if (res.ok) {
             const data = await res.json();
-            if (data?.rates) {
-              set({ liveRates: data.rates });
+            if (data.rates) {
+              set((state) => ({
+                liveRates: data.rates,
+                cryptoBalances: computeBalances(state.baseBalanceUSD, data.rates),
+              }));
             }
           }
         } catch {
-          // Gracefully fallback to static rates
+          // Graceful fallback to cached rates
         }
       },
 
       setDepositModalOpen: (isOpen) => set({ isDepositModalOpen: isOpen }),
-      setCurrency: (currency) => set({ activeCurrency: currency }),
+
+      setCurrency: (currency) => {
+        set({ activeCurrency: currency });
+      },
 
       createPlan: (amount, currency, duration) => {
         const state = get();
-        const currentBalance = state.cryptoBalances[currency] ?? 0;
+        const config = PLAN_CONFIG[duration];
+        if (!config) return false;
 
-        // Check wallet balance
-        if (currentBalance < amount) {
-          set({ toastMessage: "Insufficient balance in selected currency." });
-          return false;
-        }
-
-        // Convert amount to USD base for uniform tracking
+        // Convert the staked amount in chosen currency into base USD capital
         const capitalUsd = convertCryptoToFiat(amount, currency, state.liveRates);
-        if (capitalUsd < 50) {
-          set({ toastMessage: "Minimum capital requirement is $50.00 USD." });
+
+        // Check against unified single balance (stored in base USD)
+        if (state.baseBalanceUSD < capitalUsd) {
           return false;
         }
 
-        const config = PLAN_CONFIG[duration] || PLAN_CONFIG[1];
-        const profitUsd = capitalUsd * (config.ratePercent / 100);
-        const payoutUsd = capitalUsd + profitUsd;
+        const projectedProfitUsd = capitalUsd * (config.ratePercent / 100);
+        const totalPayoutUsd = capitalUsd + projectedProfitUsd;
 
         const now = new Date();
         const maturity = new Date();
@@ -295,8 +315,8 @@ export const useStore = create<AppState>()(
           currency,
           durationMonths: duration,
           interestRatePercent: config.ratePercent,
-          projectedProfit: profitUsd,
-          totalPayout: payoutUsd,
+          projectedProfit: projectedProfitUsd,
+          totalPayout: totalPayoutUsd,
           startDate: now.toISOString(),
           maturityDate: maturity.toISOString(),
           isMatured: false,
@@ -307,7 +327,7 @@ export const useStore = create<AppState>()(
           id: "tx-" + Math.random().toString(36).substring(2, 9),
           date: now.toISOString(),
           type: "PLAN_STAKE",
-          description: `${config.label} Fixed Growth Plan (${amount.toFixed(2)} ${currency} @ +${config.ratePercent}%)`,
+          description: `${config.label} Fixed Growth Plan (${formatCrypto(amount, currency)} @ +${config.ratePercent}%)`,
           amount: -amount,
           currency,
           status: "COMPLETED",
@@ -316,24 +336,25 @@ export const useStore = create<AppState>()(
 
         const newNotification: Notification = {
           id: "notif-" + Math.random().toString(36).substring(2, 9),
-          message: `Active Plan Started: ${amount.toFixed(2)} ${currency} locked for ${config.label} (+${config.ratePercent}% return).`,
+          message: `Active Plan Started: ${formatCrypto(amount, currency)} locked for ${config.label} (+${config.ratePercent}% return).`,
           timestamp: now.toISOString(),
           read: false,
         };
 
-        const newBal = currentBalance - amount;
+        const newBaseUSD = state.baseBalanceUSD - capitalUsd;
+        const updatedCurrent: UserAccount = {
+          ...state.currentUser,
+          baseBalanceUSD: newBaseUSD,
+        };
+        const updatedUsers = state.users.map((u) =>
+          u.id === state.currentUser.id ? updatedCurrent : u
+        );
+
         set({
-          cryptoBalances: {
-            ...state.cryptoBalances,
-            [currency]: newBal,
-          },
-          currentUser: {
-            ...state.currentUser,
-            balances: {
-              ...state.currentUser.balances,
-              [currency]: newBal,
-            },
-          },
+          baseBalanceUSD: newBaseUSD,
+          cryptoBalances: computeBalances(newBaseUSD, state.liveRates),
+          currentUser: updatedCurrent,
+          users: updatedUsers,
           savingsPlans: [newPlan, ...state.savingsPlans],
           transactions: [newTx, ...state.transactions],
           notifications: [newNotification, ...state.notifications],
@@ -368,15 +389,14 @@ export const useStore = create<AppState>()(
           state.liveRates
         );
 
-        const now = new Date();
         const newTx: Transaction = {
           id: "tx-" + Math.random().toString(36).substring(2, 9),
-          date: now.toISOString(),
-          type: "PLAN_PAYOUT",
-          description: `Matured Payout: ${plan.durationMonths}-Month Plan (+${plan.interestRatePercent}% Profit Disbursed)`,
+          date: new Date().toISOString(),
+          type: 'PLAN_PAYOUT',
+          description: `Matured Plan Payout: ${plan.interestRatePercent}% Yield on ${plan.capital.toFixed(2)} USD Principal`,
           amount: payoutCurrencyAmount,
           currency: plan.currency,
-          status: "COMPLETED",
+          status: 'COMPLETED',
           userId: state.currentUser.id,
         };
 
@@ -384,54 +404,58 @@ export const useStore = create<AppState>()(
           p.id === planId ? { ...p, status: 'WITHDRAWN' as const } : p
         );
 
-        const newBal = (state.cryptoBalances[plan.currency] ?? 0) + payoutCurrencyAmount;
+        const newBaseUSD = state.baseBalanceUSD + plan.totalPayout;
+        const updatedCurrent: UserAccount = {
+          ...state.currentUser,
+          baseBalanceUSD: newBaseUSD,
+        };
+        const updatedUsers = state.users.map((u) =>
+          u.id === state.currentUser.id ? updatedCurrent : u
+        );
+
         set({
-          cryptoBalances: {
-            ...state.cryptoBalances,
-            [plan.currency]: newBal,
-          },
-          currentUser: {
-            ...state.currentUser,
-            balances: {
-              ...state.currentUser.balances,
-              [plan.currency]: newBal,
-            },
-          },
+          baseBalanceUSD: newBaseUSD,
+          cryptoBalances: computeBalances(newBaseUSD, state.liveRates),
+          currentUser: updatedCurrent,
+          users: updatedUsers,
           savingsPlans: updatedPlans,
           transactions: [newTx, ...state.transactions],
-          toastMessage: `Successfully claimed ${payoutCurrencyAmount.toFixed(2)} ${plan.currency} payout!`,
+          toastMessage: `Successfully claimed ${formatCrypto(payoutCurrencyAmount, plan.currency)} payout!`,
         });
 
         return { success: true };
       },
 
       depositFunds: (currency, amount) => {
-        set((state) => {
-          const newTx: Transaction = {
-            id: Math.random().toString(36).substring(2, 9),
-            date: new Date().toISOString(),
-            type: 'DEPOSIT',
-            description: `${currency} Capital Deposit`,
-            amount: amount,
-            currency,
-            status: 'COMPLETED',
-            userId: state.currentUser.id,
-          };
-          const newBal = (state.cryptoBalances[currency] ?? 0) + amount;
-          return {
-            cryptoBalances: {
-              ...state.cryptoBalances,
-              [currency]: newBal,
-            },
-            currentUser: {
-              ...state.currentUser,
-              balances: {
-                ...state.currentUser.balances,
-                [currency]: newBal,
-              },
-            },
-            transactions: [newTx, ...state.transactions],
-          };
+        const state = get();
+        const depositValueUSD = convertCryptoToFiat(amount, currency, state.liveRates);
+        const newBaseUSD = state.baseBalanceUSD + depositValueUSD;
+
+        const newTx: Transaction = {
+          id: Math.random().toString(36).substring(2, 9),
+          date: new Date().toISOString(),
+          type: 'DEPOSIT',
+          description: `${currency} Capital Deposit`,
+          amount: amount,
+          currency,
+          status: 'COMPLETED',
+          userId: state.currentUser.id,
+        };
+
+        const updatedCurrent: UserAccount = {
+          ...state.currentUser,
+          baseBalanceUSD: newBaseUSD,
+        };
+        const updatedUsers = state.users.map((u) =>
+          u.id === state.currentUser.id ? updatedCurrent : u
+        );
+
+        set({
+          baseBalanceUSD: newBaseUSD,
+          cryptoBalances: computeBalances(newBaseUSD, state.liveRates),
+          currentUser: updatedCurrent,
+          users: updatedUsers,
+          transactions: [newTx, ...state.transactions],
         });
       },
 
@@ -453,7 +477,7 @@ export const useStore = create<AppState>()(
 
         const newNotification: Notification = {
           id: "notif-" + Math.random().toString(36).substring(2, 9),
-          message: `Deposit of ${amount} ${currency} submitted and pending admin approval.`,
+          message: `Deposit of ${amount} ${currency} submitted and pending admin verification.`,
           timestamp: now,
           read: false,
         };
@@ -461,7 +485,7 @@ export const useStore = create<AppState>()(
         set({
           transactions: [newTx, ...state.transactions],
           notifications: [newNotification, ...state.notifications],
-          toastMessage: `Proof of payment submitted for ${amount} ${currency}. Pending review.`,
+          toastMessage: "Proof of payment submitted! Pending administrative review.",
         });
       },
 
@@ -476,25 +500,34 @@ export const useStore = create<AppState>()(
 
         const newNotification: Notification = {
           id: "notif-" + Math.random().toString(36).substring(2, 9),
-          message: `Deposit of ${tx.amount} ${tx.currency} has been approved and credited to your wallet.`,
+          message: `Deposit of ${tx.amount} ${tx.currency} was verified and credited to your balance!`,
           timestamp: new Date().toISOString(),
           read: false,
         };
 
-        const newBal = (state.cryptoBalances[tx.currency] ?? 0) + tx.amount;
+        const depositValueUSD = convertCryptoToFiat(tx.amount, tx.currency, state.liveRates);
+        const newBaseUSD = state.baseBalanceUSD + depositValueUSD;
+
+        const isCurrent = !tx.userId || tx.userId === state.currentUser.id;
+        const updatedUsers = state.users.map((u) => {
+          if ((tx.userId && u.id === tx.userId) || (!tx.userId && u.id === state.currentUser.id)) {
+            return {
+              ...u,
+              baseBalanceUSD: (u.baseBalanceUSD || 0) + depositValueUSD,
+            };
+          }
+          return u;
+        });
+
+        const updatedCurrent: UserAccount = isCurrent
+          ? { ...state.currentUser, baseBalanceUSD: newBaseUSD }
+          : state.currentUser;
 
         set({
-          cryptoBalances: {
-            ...state.cryptoBalances,
-            [tx.currency]: newBal,
-          },
-          currentUser: {
-            ...state.currentUser,
-            balances: {
-              ...state.currentUser.balances,
-              [tx.currency]: newBal,
-            },
-          },
+          baseBalanceUSD: isCurrent ? newBaseUSD : state.baseBalanceUSD,
+          cryptoBalances: isCurrent ? computeBalances(newBaseUSD, state.liveRates) : state.cryptoBalances,
+          currentUser: updatedCurrent,
+          users: updatedUsers,
           transactions: updatedTxList,
           notifications: [newNotification, ...state.notifications],
           toastMessage: `Deposit #${txId.slice(0, 8)} approved and credited successfully!`,
@@ -527,19 +560,22 @@ export const useStore = create<AppState>()(
       updateUserBalance: (currency, newBalance) => {
         const state = get();
         const safeBal = Math.max(0, newBalance);
+        const newBaseUSD = convertCryptoToFiat(safeBal, currency, state.liveRates);
+
+        const updatedCurrent: UserAccount = {
+          ...state.currentUser,
+          baseBalanceUSD: newBaseUSD,
+        };
+        const updatedUsers = state.users.map((u) =>
+          u.id === state.currentUser.id ? updatedCurrent : u
+        );
+
         set({
-          cryptoBalances: {
-            ...state.cryptoBalances,
-            [currency]: safeBal,
-          },
-          currentUser: {
-            ...state.currentUser,
-            balances: {
-              ...state.currentUser.balances,
-              [currency]: safeBal,
-            },
-          },
-          toastMessage: `${currency} balance updated to ${newBalance}.`,
+          baseBalanceUSD: newBaseUSD,
+          cryptoBalances: computeBalances(newBaseUSD, state.liveRates),
+          currentUser: updatedCurrent,
+          users: updatedUsers,
+          toastMessage: `Balance updated to ${safeBal} ${currency} ($${newBaseUSD.toFixed(2)} USD).`,
         });
       },
 
@@ -555,8 +591,8 @@ export const useStore = create<AppState>()(
           };
         }
 
-        const currentBalance = state.cryptoBalances[currency] ?? 0;
-        if (currentBalance < amount) {
+        const withdrawValueUSD = convertCryptoToFiat(amount, currency, state.liveRates);
+        if (state.baseBalanceUSD < withdrawValueUSD) {
           return { success: false, error: "Insufficient balance for withdrawal." };
         }
 
@@ -572,21 +608,22 @@ export const useStore = create<AppState>()(
           userId: state.currentUser.id,
         };
 
-        const newBal = currentBalance - amount;
+        const newBaseUSD = state.baseBalanceUSD - withdrawValueUSD;
+        const updatedCurrent: UserAccount = {
+          ...state.currentUser,
+          baseBalanceUSD: newBaseUSD,
+        };
+        const updatedUsers = state.users.map((u) =>
+          u.id === state.currentUser.id ? updatedCurrent : u
+        );
+
         set({
-          cryptoBalances: {
-            ...state.cryptoBalances,
-            [currency]: newBal,
-          },
-          currentUser: {
-            ...state.currentUser,
-            balances: {
-              ...state.currentUser.balances,
-              [currency]: newBal,
-            },
-          },
+          baseBalanceUSD: newBaseUSD,
+          cryptoBalances: computeBalances(newBaseUSD, state.liveRates),
+          currentUser: updatedCurrent,
+          users: updatedUsers,
           transactions: [newTx, ...state.transactions],
-          toastMessage: `Withdrawal of ${amount.toFixed(2)} ${currency} submitted!`,
+          toastMessage: `Withdrawal of ${formatCrypto(amount, currency)} submitted!`,
         });
 
         return { success: true };
@@ -613,7 +650,9 @@ export const useStore = create<AppState>()(
           kycData: kycPayload,
         };
 
-        const updatedUsers = state.users.map(u => u.id === state.currentUser.id ? updatedCurrentUser : u);
+        const updatedUsers = state.users.map((u) =>
+          u.id === state.currentUser.id ? updatedCurrentUser : u
+        );
 
         const newNotif: Notification = {
           id: "notif-" + Math.random().toString(36).substring(2, 9),
@@ -625,20 +664,84 @@ export const useStore = create<AppState>()(
         set({
           currentUser: updatedCurrentUser,
           users: updatedUsers,
-          user: { ...state.user, kycStatus: "pending" },
+          user: {
+            ...state.user,
+            kycStatus: "pending",
+          },
           notifications: [newNotif, ...state.notifications],
-          toastMessage: "Identity verification submitted and pending review.",
+          toastMessage: "KYC documents submitted successfully. Verification in progress.",
         });
       },
 
-      setToast: (msg) => {
-        set({ toastMessage: msg });
-      },
+      setToast: (msg) => set({ toastMessage: msg }),
 
       markNotificationsAsRead: () => {
         set((state) => ({
           notifications: state.notifications.map((n) => ({ ...n, read: true })),
         }));
+      },
+
+      // Profile Avatar Action
+      updateUserAvatar: (avatarBase64) => {
+        const state = get();
+        const updatedCurrent: UserAccount = {
+          ...state.currentUser,
+          avatar: avatarBase64 || undefined,
+        };
+        const updatedUsers = state.users.map((u) =>
+          u.id === state.currentUser.id ? updatedCurrent : u
+        );
+
+        set({
+          currentUser: updatedCurrent,
+          users: updatedUsers,
+          user: {
+            ...state.user,
+            avatar: avatarBase64 || undefined,
+          },
+          toastMessage: avatarBase64 ? "Profile picture updated successfully!" : "Profile picture removed.",
+        });
+      },
+
+      // Admin Broadcast / Push Notification Action
+      adminPushNotification: (recipientId, message) => {
+        const state = get();
+        const now = new Date().toISOString();
+        const newNotif: Notification = {
+          id: "notif-" + Math.random().toString(36).substring(2, 9),
+          message,
+          timestamp: now,
+          read: false,
+        };
+
+        if (recipientId === 'ALL') {
+          const updatedUsers = state.users.map((u) => ({
+            ...u,
+            notifications: [newNotif, ...(u.notifications || [])],
+          }));
+
+          set({
+            users: updatedUsers,
+            notifications: [newNotif, ...state.notifications],
+            toastMessage: "Announcement broadcasted to all users successfully.",
+          });
+        } else {
+          const updatedUsers = state.users.map((u) =>
+            u.id === recipientId
+              ? {
+                  ...u,
+                  notifications: [newNotif, ...(u.notifications || [])],
+                }
+              : u
+          );
+
+          const isCurrent = state.currentUser.id === recipientId;
+          set({
+            users: updatedUsers,
+            notifications: isCurrent ? [newNotif, ...state.notifications] : state.notifications,
+            toastMessage: `Push notification sent to user ${recipientId}.`,
+          });
+        }
       },
 
       // Destination Wallet Linking Actions
@@ -647,15 +750,17 @@ export const useStore = create<AppState>()(
         const newWallet: LinkedWallet = {
           id: "w-" + Math.random().toString(36).substring(2, 9),
           currency,
-          label: label.trim() || `${currency} Destination Account`,
-          address: address.trim(),
-          isDefault: (state.currentUser.linkedWallets || []).filter(w => w.currency === currency).length === 0,
+          label,
+          address,
+          isDefault: (state.currentUser.linkedWallets || []).filter((w) => w.currency === currency).length === 0,
           createdAt: new Date().toISOString(),
         };
 
         const updatedWallets = [...(state.currentUser.linkedWallets || []), newWallet];
         const updatedCurrentUser: UserAccount = { ...state.currentUser, linkedWallets: updatedWallets };
-        const updatedUsers = state.users.map(u => u.id === state.currentUser.id ? updatedCurrentUser : u);
+        const updatedUsers = state.users.map((u) =>
+          u.id === state.currentUser.id ? updatedCurrentUser : u
+        );
 
         set({
           currentUser: updatedCurrentUser,
@@ -668,9 +773,11 @@ export const useStore = create<AppState>()(
 
       removeLinkedWallet: (walletId) => {
         const state = get();
-        const updatedWallets = (state.currentUser.linkedWallets || []).filter(w => w.id !== walletId);
+        const updatedWallets = (state.currentUser.linkedWallets || []).filter((w) => w.id !== walletId);
         const updatedCurrentUser: UserAccount = { ...state.currentUser, linkedWallets: updatedWallets };
-        const updatedUsers = state.users.map(u => u.id === state.currentUser.id ? updatedCurrentUser : u);
+        const updatedUsers = state.users.map((u) =>
+          u.id === state.currentUser.id ? updatedCurrentUser : u
+        );
 
         set({
           currentUser: updatedCurrentUser,
@@ -682,7 +789,7 @@ export const useStore = create<AppState>()(
       // Admin User Management Actions
       adminUpdateUser: (userId, data) => {
         const state = get();
-        const updatedUsers = state.users.map(u => {
+        const updatedUsers = state.users.map((u) => {
           if (u.id === userId) {
             return { ...u, ...data };
           }
@@ -695,11 +802,13 @@ export const useStore = create<AppState>()(
         set({
           users: updatedUsers,
           currentUser: updatedCurrent,
-          user: isCurrent ? {
-            ...state.user,
-            name: data.name ?? state.user.name,
-            email: data.email ?? state.user.email,
-          } : state.user,
+          user: isCurrent
+            ? {
+                ...state.user,
+                name: data.name ?? state.user.name,
+                email: data.email ?? state.user.email,
+              }
+            : state.user,
           toastMessage: `User profile updated.`,
         });
       },
@@ -711,7 +820,7 @@ export const useStore = create<AppState>()(
           return;
         }
         set({
-          users: state.users.filter(u => u.id !== userId),
+          users: state.users.filter((u) => u.id !== userId),
           toastMessage: `User ${userId} deleted.`,
         });
       },
@@ -726,10 +835,12 @@ export const useStore = create<AppState>()(
 
       adminToggleSuspension: (userId) => {
         const state = get();
-        const target = state.users.find(u => u.id === userId);
+        const target = state.users.find((u) => u.id === userId);
         if (!target) return;
         const newStatus: 'active' | 'suspended' = target.status === 'active' ? 'suspended' : 'active';
-        const updatedUsers = state.users.map(u => u.id === userId ? { ...u, status: newStatus } : u);
+        const updatedUsers = state.users.map((u) =>
+          u.id === userId ? { ...u, status: newStatus } : u
+        );
         const isCurrent = state.currentUser.id === userId;
 
         set({
@@ -742,14 +853,13 @@ export const useStore = create<AppState>()(
       adminUpdateUserBalance: (userId, currency, amount) => {
         const state = get();
         const safeBal = Math.max(0, amount);
-        const updatedUsers = state.users.map(u => {
+        const newBaseUSD = convertCryptoToFiat(safeBal, currency, state.liveRates);
+
+        const updatedUsers = state.users.map((u) => {
           if (u.id === userId) {
             return {
               ...u,
-              balances: {
-                ...u.balances,
-                [currency]: safeBal,
-              },
+              baseBalanceUSD: newBaseUSD,
             };
           }
           return u;
@@ -758,25 +868,22 @@ export const useStore = create<AppState>()(
         const isCurrent = state.currentUser.id === userId;
         set({
           users: updatedUsers,
-          currentUser: isCurrent ? {
-            ...state.currentUser,
-            balances: {
-              ...state.currentUser.balances,
-              [currency]: safeBal,
-            },
-          } : state.currentUser,
-          cryptoBalances: isCurrent ? {
-            ...state.cryptoBalances,
-            [currency]: safeBal,
-          } : state.cryptoBalances,
-          toastMessage: `Updated ${currency} balance for ${userId} to ${amount}.`,
+          currentUser: isCurrent
+            ? {
+                ...state.currentUser,
+                baseBalanceUSD: newBaseUSD,
+              }
+            : state.currentUser,
+          baseBalanceUSD: isCurrent ? newBaseUSD : state.baseBalanceUSD,
+          cryptoBalances: isCurrent ? computeBalances(newBaseUSD, state.liveRates) : state.cryptoBalances,
+          toastMessage: `Updated balance for ${userId} to ${amount} ${currency} ($${newBaseUSD.toFixed(2)} USD).`,
         });
       },
 
       // Admin KYC Approval Actions
       adminApproveKyc: (userId) => {
         const state = get();
-        const updatedUsers = state.users.map(u => {
+        const updatedUsers = state.users.map((u) => {
           if (u.id === userId) {
             return { ...u, kycStatus: 'verified' as const };
           }
@@ -803,7 +910,7 @@ export const useStore = create<AppState>()(
 
       adminRejectKyc: (userId, reason) => {
         const state = get();
-        const updatedUsers = state.users.map(u => {
+        const updatedUsers = state.users.map((u) => {
           if (u.id === userId) {
             return {
               ...u,
@@ -833,7 +940,7 @@ export const useStore = create<AppState>()(
       },
     }),
     {
-      name: 'forge-savings-storage-v3',
+      name: 'forge-savings-storage-v4',
     }
   )
 );

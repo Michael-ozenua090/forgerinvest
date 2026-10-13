@@ -22,7 +22,7 @@ const CURRENCY_LIST: CurrencyType[] = ['USD', 'GBP', 'BTC', 'ETH', 'SOL'];
 
 export default function WalletPage() {
   const { 
-    cryptoBalances, 
+    getBalance, 
     activeCurrency, 
     setDepositModalOpen,
     currentUser,
@@ -90,7 +90,7 @@ export default function WalletPage() {
           
           <p className="text-sm font-bold uppercase tracking-wider text-forge-gray-400 mb-2">Available Balance ({activeCurrency})</p>
           <p className="tabular-nums font-display font-extrabold text-5xl sm:text-6xl text-white mb-8">
-            {formatCrypto(cryptoBalances[activeCurrency], activeCurrency)}
+            {formatCrypto(getBalance(activeCurrency), activeCurrency)}
           </p>
 
           <div className="flex flex-wrap items-center gap-4">

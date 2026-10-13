@@ -33,7 +33,7 @@ const PRESET_AMOUNTS = [50, 100, 250, 500, 1000];
 export default function PlansPage() {
   const { 
     activeCurrency, 
-    cryptoBalances, 
+    getBalance, 
     liveRates, 
     createPlan,
     setDepositModalOpen 
@@ -47,7 +47,7 @@ export default function PlansPage() {
 
   // Convert capital to active currency amount
   const capitalInActiveCurrency = convertFiatToCrypto(capitalUsd, activeCurrency, liveRates);
-  const availableInActiveCurrency = cryptoBalances[activeCurrency] ?? 0;
+  const availableInActiveCurrency = getBalance(activeCurrency);
 
   // Selected plan calculation
   const planInfo = PLAN_CONFIG[selectedDuration];

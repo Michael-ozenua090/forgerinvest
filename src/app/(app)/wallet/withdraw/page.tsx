@@ -24,7 +24,7 @@ import { KycGateModal } from "@/components/KycGateModal";
 export default function WithdrawPage() {
   const router = useRouter();
   const { 
-    cryptoBalances, 
+    getBalance, 
     activeCurrency, 
     withdrawFunds, 
     isKycCompleted,
@@ -32,7 +32,7 @@ export default function WithdrawPage() {
     addLinkedWallet
   } = useStore();
 
-  const availableCrypto = cryptoBalances[activeCurrency] ?? 0;
+  const availableCrypto = getBalance(activeCurrency);
   
   const [step, setStep] = useState<1 | 2>(1);
   const [withdrawAmount, setWithdrawAmount] = useState<string>("");

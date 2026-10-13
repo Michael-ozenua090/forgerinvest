@@ -44,6 +44,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
   const router = useRouter();
   const { 
     user, 
+    currentUser,
     toastMessage, 
     setToast, 
     notifications, 
@@ -86,7 +87,6 @@ export default function PortalShell({ children }: { children: React.ReactNode })
     { name: "Active Growth Portfolio", type: "Portfolio", href: "/portfolio" },
     { name: "Deposit Capital", type: "Wallet", href: "/wallet" },
     { name: "Withdraw Funds", type: "Wallet", href: "/wallet/withdraw" },
-    { name: "Treasury Admin Portal", type: "Admin", href: "/admin" },
   ].filter(s => s.name.toLowerCase().includes(cmdSearch.toLowerCase()));
 
   return (
@@ -132,11 +132,22 @@ export default function PortalShell({ children }: { children: React.ReactNode })
         {/* User Profile Snippet */}
         <div className="p-6 border-b border-forge-gray-200 shrink-0">
           <Link href={ROUTES.app.settings} className="flex items-center gap-3 mb-3 hover:opacity-80 transition-opacity">
-            <div className="w-10 h-10 rounded-full bg-forge-gray-900 text-white flex items-center justify-center font-display font-bold text-sm shrink-0 uppercase">
-              {user.name.split(' ').map(n => n[0]).join('')}
-            </div>
-            <div>
-              <p className="font-body font-bold text-sm text-forge-gray-900">{user.name}</p>
+            {(currentUser?.avatar || user.avatar) ? (
+              <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-forge-gray-200">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img 
+                  src={currentUser?.avatar || user.avatar} 
+                  alt={user.name} 
+                  className="w-full h-full object-cover" 
+                />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-forge-gray-900 text-white flex items-center justify-center font-display font-bold text-sm shrink-0 uppercase">
+                {user.name.split(' ').map(n => n[0]).join('')}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="font-body font-bold text-sm text-forge-gray-900 truncate">{user.name}</p>
               <p className="font-body text-xs text-forge-gray-500">ID: FG-8492</p>
             </div>
           </Link>
@@ -169,17 +180,19 @@ export default function PortalShell({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        {/* Admin Link */}
-        <div className="px-3 py-2 border-t border-forge-gray-100">
-          <Link 
-            href="/admin"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-3 px-3 py-2 text-xs font-bold text-forge-gray-500 hover:text-forge-orange hover:bg-forge-orange-wash rounded-lg transition-colors"
-          >
-            <ShieldCheck size={16} />
-            <span>Treasury Admin</span>
-          </Link>
-        </div>
+        {/* Admin Link - Only visible if user.role === 'admin' */}
+        {currentUser?.role === 'admin' && (
+          <div className="px-3 py-2 border-t border-forge-gray-100">
+            <Link 
+              href="/admin"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-2 text-xs font-bold text-forge-gray-500 hover:text-forge-orange hover:bg-forge-orange-wash rounded-lg transition-colors"
+            >
+              <ShieldCheck size={16} />
+              <span>Treasury Admin</span>
+            </Link>
+          </div>
+        )}
 
         {/* Sign Out */}
         <div className="p-4 border-t border-forge-gray-200 shrink-0">
