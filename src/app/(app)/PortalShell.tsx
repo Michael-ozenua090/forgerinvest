@@ -25,6 +25,7 @@ import { useStore } from "@/lib/store";
 import { CurrencySelector } from "@/components/CurrencySelector";
 import { CryptoDepositModal } from "@/components/CryptoDepositModal";
 import { useHydration } from "@/lib/useHydration";
+import { createClient } from "@/lib/supabase/client";
 
 // Intentional Friction Architecture: KYC link is removed from navigation menus
 const navLinks = [
@@ -42,6 +43,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
   const [cmdOpen, setCmdOpen] = useState(false);
   const [cmdSearch, setCmdSearch] = useState("");
   const [notifOpen, setNotifOpen] = useState(false);
+  const [isAuthVerified, setIsAuthVerified] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { 
@@ -54,10 +56,182 @@ export default function PortalShell({ children }: { children: React.ReactNode })
     isDepositModalOpen, 
     setDepositModalOpen,
     fetchRates,
-    syncWithBackend 
+    syncWithBackend,
+    setCurrentUser,
+    setSavingsPlans,
+    setTransactions,
+    setNotifications,
+    setLinkedWallets,
+    resetSession,
   } = useStore();
 
   const unreadCount = notifications ? notifications.filter((n: any) => !n.read).length : 0;
+
+  // Supabase Auth Route Guard & Data Synchronization
+  useEffect(() => {
+    let isMounted = true;
+
+    const verifySessionAndSync = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+
+        if (authError || !authUser) {
+          router.replace(ROUTES.auth.login);
+          return;
+        }
+
+        if (isMounted) {
+          setIsAuthVerified(true);
+        }
+
+        // Query canonical profile from Supabase
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authUser.id)
+          .maybeSingle();
+
+        const resolvedName = profile?.name || profile?.full_name || (
+          authUser.user_metadata?.first_name 
+            ? `${authUser.user_metadata.first_name} ${authUser.user_metadata.last_name || ''}`.trim()
+            : authUser.email?.split('@')[0] || 'Member'
+        );
+
+        const resolvedEmail = profile?.email || authUser.email || '';
+        const resolvedAvatar = profile?.avatar_url || profile?.avatar || undefined;
+        const resolvedBalance = profile?.base_balance_usd !== undefined ? Number(profile.base_balance_usd) : 0;
+        const resolvedKyc = profile?.kyc_status || (authUser.user_metadata?.kyc_status ?? 'unverified');
+        const resolvedRole = profile?.role || 'user';
+        const resolvedStatus = profile?.status || 'active';
+
+        if (isMounted) {
+          setCurrentUser({
+            id: authUser.id,
+            name: resolvedName,
+            email: resolvedEmail,
+            avatar: resolvedAvatar,
+            baseBalanceUSD: resolvedBalance,
+            kycStatus: resolvedKyc,
+            role: resolvedRole,
+            status: resolvedStatus,
+          });
+        }
+
+        // Query user's linked wallets
+        try {
+          const { data: dbWallets } = await supabase
+            .from('linked_wallets')
+            .select('*')
+            .eq('user_id', authUser.id);
+
+          if (dbWallets && isMounted) {
+            setLinkedWallets(dbWallets.map((w: any) => ({
+              id: w.id,
+              currency: w.currency,
+              label: w.label,
+              address: w.address,
+              isDefault: w.is_default ?? w.isDefault,
+              createdAt: w.created_at || new Date().toISOString(),
+            })));
+          }
+        } catch {
+          // Graceful fallback if linked_wallets table not migrated
+        }
+
+        // Query user's savings plans
+        try {
+          const { data: dbPlans } = await supabase
+            .from('savings_plans')
+            .select('*')
+            .eq('user_id', authUser.id);
+
+          if (dbPlans && isMounted) {
+            setSavingsPlans(dbPlans.map((p: any) => ({
+              id: p.id,
+              capital: Number(p.capital || 0),
+              currency: p.currency || 'USD',
+              durationMonths: p.duration_months || p.durationMonths || 1,
+              interestRatePercent: p.interest_rate_percent || p.interestRatePercent || 6,
+              projectedProfit: Number(p.projected_profit || p.projectedProfit || 0),
+              totalPayout: Number(p.total_payout || p.totalPayout || 0),
+              startDate: p.start_date || p.startDate,
+              maturityDate: p.maturity_date || p.maturityDate,
+              isMatured: p.is_matured ?? p.isMatured ?? false,
+              status: p.status,
+            })));
+          }
+        } catch {
+          // Graceful fallback if savings_plans table not migrated
+        }
+
+        // Query user's transactions
+        try {
+          const { data: dbTxs } = await supabase
+            .from('transactions')
+            .select('*')
+            .eq('user_id', authUser.id);
+
+          if (dbTxs && isMounted) {
+            setTransactions(dbTxs.map((t: any) => ({
+              id: t.id,
+              date: t.date || t.created_at,
+              type: t.type,
+              description: t.description || '',
+              amount: Number(t.amount || 0),
+              currency: t.currency || 'USD',
+              status: t.status,
+              txHash: t.tx_hash || t.txHash,
+              destinationAddress: t.destination_address || t.destinationAddress,
+              proofImage: t.proof_image || t.proofImage,
+              rejectionReason: t.rejection_reason || t.rejectionReason,
+              userId: t.user_id || t.userId,
+            })));
+          }
+        } catch {
+          // Graceful fallback if transactions table not migrated
+        }
+
+        // Query user's notifications
+        try {
+          const { data: dbNotifs } = await supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', authUser.id);
+
+          if (dbNotifs && isMounted) {
+            setNotifications(dbNotifs.map((n: any) => ({
+              id: n.id,
+              message: n.message,
+              timestamp: n.timestamp || n.created_at,
+              read: n.read ?? false,
+            })));
+          }
+        } catch {
+          // Graceful fallback if notifications table not migrated
+        }
+      } catch (err) {
+        console.error('Session verification error:', err);
+      }
+    };
+
+    verifySessionAndSync();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [router, setCurrentUser, setLinkedWallets, setSavingsPlans, setTransactions, setNotifications]);
+
+  const handleSignOut = async () => {
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Error signing out from Supabase:', err);
+    }
+    resetSession();
+    router.replace(ROUTES.auth.login);
+  };
 
   useEffect(() => {
     fetchRates();
@@ -147,14 +321,18 @@ export default function PortalShell({ children }: { children: React.ReactNode })
               </div>
             ) : (
               <div className="w-10 h-10 rounded-full bg-forge-gray-900 text-white flex items-center justify-center font-display font-bold text-sm shrink-0 uppercase" suppressHydrationWarning>
-                {isHydrated ? user.name.split(' ').map(n => n[0]).join('') : 'MS'}
+                {isHydrated && (user.name || currentUser?.name)
+                  ? (user.name || currentUser?.name).split(' ').filter(Boolean).map(n => n[0]).join('')
+                  : 'FC'}
               </div>
             )}
             <div className="min-w-0">
               <p className="font-body font-bold text-sm text-forge-gray-900 truncate" suppressHydrationWarning>
-                {isHydrated ? user.name : "Member"}
+                {isHydrated ? (user.name || currentUser?.name || "Member") : "Member"}
               </p>
-              <p className="font-body text-xs text-forge-gray-500">ID: FG-8492</p>
+              <p className="font-body text-xs text-forge-gray-500" suppressHydrationWarning>
+                ID: {currentUser?.id ? `FG-${currentUser.id.slice(0, 6).toUpperCase()}` : "FG-MEMBER"}
+              </p>
             </div>
           </Link>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-forge-orange-wash text-forge-orange border border-forge-orange/20">
@@ -202,12 +380,13 @@ export default function PortalShell({ children }: { children: React.ReactNode })
 
         {/* Sign Out */}
         <div className="p-4 border-t border-forge-gray-200 shrink-0">
-          <Link 
-            href={ROUTES.auth.login}
+          <button 
+            type="button"
+            onClick={handleSignOut}
             className="flex items-center justify-center w-full py-2 text-sm font-bold text-forge-gray-500 hover:text-forge-gray-900 transition-colors"
           >
             Sign Out
-          </Link>
+          </button>
         </div>
       </aside>
 

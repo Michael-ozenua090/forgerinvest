@@ -21,6 +21,7 @@ import { useStore, LinkedWallet } from "@/lib/store";
 import { formatCrypto } from "@/lib/format";
 import { KycGateModal } from "@/components/KycGateModal";
 import { useHydration } from "@/lib/useHydration";
+import { createClient } from "@/lib/supabase/client";
 
 export default function WithdrawPage() {
   const isHydrated = useHydration();
@@ -112,7 +113,7 @@ export default function WithdrawPage() {
     }
   };
 
-  const handleSaveLinkedWallet = (e: React.FormEvent) => {
+  const handleSaveLinkedWallet = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newWalletLabel.trim()) {
       setLinkError("Please provide a recognizable label for this account.");
@@ -124,6 +125,27 @@ export default function WithdrawPage() {
     }
 
     const created = addLinkedWallet(activeCurrency, newWalletLabel.trim(), newWalletAddress.trim());
+
+    try {
+      const supabase = createClient();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        await supabase
+          .from("linked_wallets")
+          .insert({
+            id: created.id,
+            user_id: authUser.id,
+            currency: activeCurrency,
+            label: newWalletLabel.trim(),
+            address: newWalletAddress.trim(),
+            is_default: created.isDefault,
+            created_at: created.createdAt,
+          });
+      }
+    } catch (err) {
+      console.error("Failed to sync linked wallet to Supabase:", err);
+    }
+
     setSelectedWalletId(created.id);
     setNewWalletLabel("");
     setNewWalletAddress("");
@@ -207,7 +229,32 @@ export default function WithdrawPage() {
                 </button>
               </div>
 
-              {matchingWallets.length === 0 ? (
+              {(!currentUser?.linkedWallets || currentUser.linkedWallets.length === 0) ? (
+                /* Empty state: No linked wallets */
+                <div className="p-6 border-2 border-dashed border-forge-gray-200 bg-forge-gray-50/50 rounded-2xl text-center space-y-3">
+                  <div className="w-12 h-12 rounded-xl bg-forge-gray-100 flex items-center justify-center text-forge-gray-400 mx-auto">
+                    {isFiat ? <Building2 size={24} /> : <Wallet size={24} />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-forge-gray-900">
+                      No destination accounts linked yet. Click &apos;+ Link Account&apos; to register your withdrawal address.
+                    </p>
+                    <p className="text-xs text-forge-gray-500 mt-0.5 max-w-sm mx-auto">
+                      Add your personal {isFiat ? "bank account" : `${activeCurrency} wallet`} to receive payouts and capital distributions.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLinkError(null);
+                      setIsLinkModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-forge-gray-900 text-white rounded-xl text-xs font-bold hover:bg-black transition-colors shadow-sm"
+                  >
+                    <Plus size={14} /> Link Account
+                  </button>
+                </div>
+              ) : matchingWallets.length === 0 ? (
                 /* Empty state: No matching linked wallets */
                 <div className="p-6 border-2 border-dashed border-forge-gray-200 bg-forge-gray-50/50 rounded-2xl text-center space-y-3">
                   <div className="w-12 h-12 rounded-xl bg-forge-gray-100 flex items-center justify-center text-forge-gray-400 mx-auto">

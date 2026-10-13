@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ShieldCheck, CheckCircle2, Loader2, FileCheck } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { createClient } from "@/lib/supabase/client";
 
 export default function KYCPage() {
   const { user, completeKYC, setToast } = useStore();
@@ -58,16 +59,30 @@ export default function KYCPage() {
     setFormData((prev) => ({ ...prev, [id]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      completeKYC();
-      setIsSubmitting(false);
-      setSubmitted(true);
-      setToast("KYC verification documents submitted successfully.");
-    }, 1000);
+    try {
+      const supabase = createClient();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        await supabase
+          .from("profiles")
+          .update({
+            kyc_status: "pending",
+            kyc_data: formData,
+          })
+          .eq("id", authUser.id);
+      }
+    } catch (err) {
+      console.error("KYC submission error:", err);
+    }
+
+    completeKYC(formData);
+    setIsSubmitting(false);
+    setSubmitted(true);
+    setToast("KYC verification documents submitted successfully. Pending compliance review.");
   };
 
   const isVerified = user.kycStatus === "verified" || submitted;

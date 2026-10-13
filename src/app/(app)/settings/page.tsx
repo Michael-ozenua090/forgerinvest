@@ -83,7 +83,9 @@ export default function SettingsPage() {
                 />
               ) : (
                 <span className="font-display font-extrabold text-2xl text-white uppercase" suppressHydrationWarning>
-                  {isHydrated ? user.name.split(" ").map((n) => n[0]).join("") : "MS"}
+                  {isHydrated && (user.name || currentUser?.name) 
+                    ? (user.name || currentUser?.name).split(" ").filter(Boolean).map((n) => n[0]).join("") 
+                    : "FC"}
                 </span>
               )}
             </div>
@@ -126,15 +128,15 @@ export default function SettingsPage() {
           <div className="space-y-3 pt-1">
             <div>
               <p className="text-xs font-bold text-forge-gray-400 uppercase tracking-wider">Account Holder</p>
-              <p className="font-semibold text-forge-gray-900" suppressHydrationWarning>{isHydrated ? user.name : "Member"}</p>
+              <p className="font-semibold text-forge-gray-900" suppressHydrationWarning>{isHydrated && (user.name || currentUser?.name) ? (user.name || currentUser?.name) : "Member"}</p>
             </div>
             <div>
               <p className="text-xs font-bold text-forge-gray-400 uppercase tracking-wider">Email Address</p>
-              <p className="font-semibold text-forge-gray-900" suppressHydrationWarning>{isHydrated ? user.email : "user@forgecapital.com"}</p>
+              <p className="font-semibold text-forge-gray-900" suppressHydrationWarning>{isHydrated && (user.email || currentUser?.email) ? (user.email || currentUser?.email) : "member@forge.capital"}</p>
             </div>
             <div>
               <p className="text-xs font-bold text-forge-gray-400 uppercase tracking-wider">Account ID</p>
-              <p className="font-semibold text-forge-gray-900">FG-849204</p>
+              <p className="font-semibold text-forge-gray-900" suppressHydrationWarning>{currentUser?.id ? `FG-${currentUser.id.slice(0, 6).toUpperCase()}` : "FG-MEMBER"}</p>
             </div>
           </div>
         </div>

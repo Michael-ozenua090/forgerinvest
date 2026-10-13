@@ -4,6 +4,7 @@
 
 export const ROUTES = {
   admin: "/admin",
+  adminLogin: "/admin/login",
   marketing: {
     home: "/",
     marketplace: "/plans", // Redirects marketing directory to plans

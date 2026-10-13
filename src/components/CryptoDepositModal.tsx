@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import Image from "next/image";
+import { createClient } from "@/lib/supabase/client";
 
 interface CryptoDepositModalProps {
   isOpen: boolean;
@@ -99,17 +100,42 @@ export function CryptoDepositModal({ isOpen, onClose }: CryptoDepositModalProps)
     }
   };
 
-  const handleSubmitProof = (e: React.FormEvent) => {
+  const handleSubmitProof = async (e: React.FormEvent) => {
     e.preventDefault();
     const numAmount = parseFloat(amount);
     if (!numAmount || numAmount <= 0 || !proofImage) return;
 
+    const generatedHash = txHash.trim() || `TX-${Date.now().toString(36).toUpperCase()}`;
+
     submitDepositProof(
       tab,
       numAmount,
-      txHash.trim() || `TX-${Date.now().toString(36).toUpperCase()}`,
+      generatedHash,
       proofImage
     );
+
+    try {
+      const supabase = createClient();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        await supabase
+          .from("transactions")
+          .insert({
+            user_id: authUser.id,
+            type: "DEPOSIT",
+            amount: numAmount,
+            currency: tab,
+            status: "PENDING",
+            tx_hash: generatedHash,
+            proof_image: proofImage,
+            description: `Deposit ${tab}`,
+            date: new Date().toISOString(),
+          });
+      }
+    } catch (err) {
+      console.error("Failed to sync pending deposit to Supabase:", err);
+    }
+
     setIsSubmitted(true);
   };
 

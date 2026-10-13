@@ -28,6 +28,7 @@ import {
 import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
 import { useHydration } from "@/lib/useHydration";
+import { createClient } from "@/lib/supabase/client";
 
 const PRESET_AMOUNTS = [50, 100, 250, 500, 1000];
 
@@ -72,7 +73,7 @@ export default function PlansPage() {
     }
   };
 
-  const handleStartPlan = () => {
+  const handleStartPlan = async () => {
     if (capitalUsd < 50) return;
     if (capitalInActiveCurrency > availableInActiveCurrency) {
       setShowInsufficientModal(true);
@@ -82,6 +83,43 @@ export default function PlansPage() {
     if (success) {
       setIsSuccess(true);
       setTimeout(() => setIsSuccess(false), 5000);
+
+      try {
+        const supabase = createClient();
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          const config = PLAN_CONFIG[selectedDuration];
+          const projectedProfitUsd = (capitalUsd * config.ratePercent) / 100;
+          const totalPayoutUsd = capitalUsd + projectedProfitUsd;
+          const now = new Date();
+          const maturity = new Date(now);
+          maturity.setMonth(maturity.getMonth() + config.months);
+
+          await supabase
+            .from("savings_plans")
+            .insert({
+              user_id: authUser.id,
+              capital: capitalUsd,
+              currency: activeCurrency,
+              duration_months: config.months,
+              interest_rate_percent: config.ratePercent,
+              projected_profit: projectedProfitUsd,
+              total_payout: totalPayoutUsd,
+              start_date: now.toISOString(),
+              maturity_date: maturity.toISOString(),
+              is_matured: false,
+              status: "ACTIVE",
+            });
+
+          const newBal = useStore.getState().baseBalanceUSD || 0;
+          await supabase
+            .from("profiles")
+            .update({ base_balance_usd: newBal })
+            .eq("id", authUser.id);
+        }
+      } catch (err) {
+        console.error("Failed to sync created plan to Supabase:", err);
+      }
     }
   };
 

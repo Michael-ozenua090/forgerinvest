@@ -18,6 +18,7 @@ import { useStore } from "@/lib/store";
 import { CurrencyType, formatCrypto } from "@/lib/format";
 import Link from "next/link";
 import { useHydration } from "@/lib/useHydration";
+import { createClient } from "@/lib/supabase/client";
 
 const CURRENCY_LIST: CurrencyType[] = ['USD', 'GBP', 'BTC', 'ETH', 'SOL'];
 
@@ -28,7 +29,7 @@ export default function WalletPage() {
     activeCurrency, 
     setDepositModalOpen,
     currentUser,
-    addLinkedWallet,
+    addLinkedWallet, 
     removeLinkedWallet
   } = useStore();
 
@@ -47,7 +48,7 @@ export default function WalletPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleAddWallet = (e: React.FormEvent) => {
+  const handleAddWallet = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newLabel.trim()) {
       setFormError("Please provide an account label.");
@@ -58,11 +59,45 @@ export default function WalletPage() {
       return;
     }
 
-    addLinkedWallet(newCurrency, newLabel.trim(), newAddress.trim());
+    const created = addLinkedWallet(newCurrency, newLabel.trim(), newAddress.trim());
+
+    try {
+      const supabase = createClient();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        await supabase
+          .from("linked_wallets")
+          .insert({
+            id: created.id,
+            user_id: authUser.id,
+            currency: newCurrency,
+            label: newLabel.trim(),
+            address: newAddress.trim(),
+            is_default: created.isDefault,
+            created_at: created.createdAt,
+          });
+      }
+    } catch (err) {
+      console.error("Failed to sync linked wallet to Supabase:", err);
+    }
+
     setNewLabel("");
     setNewAddress("");
     setFormError(null);
     setIsLinkModalOpen(false);
+  };
+
+  const handleRemoveWallet = async (walletId: string) => {
+    removeLinkedWallet(walletId);
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("linked_wallets")
+        .delete()
+        .eq("id", walletId);
+    } catch (err) {
+      console.error("Failed to delete linked wallet from Supabase:", err);
+    }
   };
 
   return (
@@ -153,8 +188,8 @@ export default function WalletPage() {
         ) : linkedWallets.length === 0 ? (
           <div className="p-12 text-center text-forge-gray-500">
             <Wallet size={36} className="mx-auto text-forge-gray-300 mb-2" />
-            <p className="font-bold text-forge-gray-700">No destination wallets linked yet</p>
-            <p className="text-xs text-forge-gray-400 mt-1">Add your personal wallet or bank accounts to receive withdrawals.</p>
+            <p className="font-bold text-forge-gray-700">No destination accounts linked yet.</p>
+            <p className="text-xs text-forge-gray-400 mt-1">Click &apos;+ Link Account&apos; to register your withdrawal address.</p>
           </div>
         ) : (
           <div className="divide-y divide-forge-gray-100">
@@ -200,7 +235,7 @@ export default function WalletPage() {
                     </span>
                     <button
                       type="button"
-                      onClick={() => removeLinkedWallet(wallet.id)}
+                      onClick={() => handleRemoveWallet(wallet.id)}
                       className="p-2 text-forge-gray-400 hover:text-market-down hover:bg-market-down/10 rounded-lg transition-colors"
                       title="Remove linked wallet"
                     >

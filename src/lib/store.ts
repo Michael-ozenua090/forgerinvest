@@ -161,6 +161,15 @@ export interface AppState {
   // Admin KYC Approval Actions
   adminApproveKyc: (userId: string) => void;
   adminRejectKyc: (userId: string, reason: string) => void;
+
+  // Supabase Hydration & Auth State Actions
+  setCurrentUser: (userData: Partial<UserAccount>) => void;
+  setUsers: (users: UserAccount[]) => void;
+  setSavingsPlans: (plans: SavingsPlan[]) => void;
+  setTransactions: (transactions: Transaction[]) => void;
+  setNotifications: (notifications: Notification[]) => void;
+  setLinkedWallets: (wallets: LinkedWallet[]) => void;
+  resetSession: () => void;
 }
 
 const computeBalances = (baseUSD: number, rates: Record<CurrencyType, number>): Record<CurrencyType, number> => ({
@@ -171,88 +180,37 @@ const computeBalances = (baseUSD: number, rates: Record<CurrencyType, number>): 
   SOL: convertFiatToCrypto(baseUSD, 'SOL', rates),
 });
 
-const INITIAL_USERS: UserAccount[] = [
-  {
-    id: "USR-849204",
-    name: "Misha Stark",
-    email: "misha@forgecapital.com",
-    role: "user",
-    status: "active",
-    createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-    baseBalanceUSD: 0,
-    avatar: undefined,
-    kycStatus: "pending",
-    kycData: {
-      firstName: "Misha",
-      lastName: "Stark",
-      dob: "1992-06-14",
-      nationality: "United States",
-      documentType: "passport",
-      documentNumber: "P98421094",
-      address: "742 Evergreen Terrace",
-      city: "Springfield",
-      country: "United States",
-      frontFile: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='380' viewBox='0 0 600 380'><rect width='600' height='380' rx='20' fill='%231e293b'/><rect x='40' y='40' width='120' height='150' rx='10' fill='%23334155'/><circle cx='100' cy='100' r='35' fill='%2364748b'/><rect x='190' y='50' width='350' height='24' rx='4' fill='%23f97316'/><text x='190' y='68' fill='white' font-family='sans-serif' font-weight='bold' font-size='14'>PASSPORT IDENTIFICATION CARD</text><rect x='190' y='95' width='220' height='14' rx='3' fill='%23cbd5e1'/><rect x='190' y='120' width='180' height='14' rx='3' fill='%2394a3b8'/><rect x='190' y='145' width='280' height='14' rx='3' fill='%2364748b'/><rect x='40' y='230' width='520' height='110' rx='8' fill='%230f172a'/><text x='60' y='270' fill='%2338bdf8' font-family='monospace' font-size='16'>P&lt;USAMISHA&lt;&lt;STARK&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</text><text x='60' y='305' fill='%2338bdf8' font-family='monospace' font-size='16'>984210940USA9206148M3001015&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;02</text></svg>",
-      backFile: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='380' viewBox='0 0 600 380'><rect width='600' height='380' rx='20' fill='%230f172a'/><rect x='40' y='40' width='520' height='60' rx='6' fill='%231e293b'/><text x='60' y='75' fill='%2394a3b8' font-family='sans-serif' font-size='12'>UNITED STATES DEPARTMENT OF STATE • PASSPORT SECURITY BACK</text><rect x='40' y='130' width='300' height='12' rx='3' fill='%23334155'/><rect x='40' y='155' width='350' height='12' rx='3' fill='%23334155'/><rect x='40' y='180' width='250' height='12' rx='3' fill='%23334155'/><rect x='420' y='130' width='140' height='140' rx='10' fill='%231e293b' stroke='%23334155' stroke-width='2'/><text x='445' y='205' fill='%2364748b' font-family='sans-serif' font-size='12'>EMBOSSED SEAL</text></svg>",
-      selfieFile: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'><rect width='400' height='400' rx='20' fill='%231e293b'/><circle cx='200' cy='160' r='70' fill='%23f97316'/><circle cx='200' cy='150' r='55' fill='%23fdba74'/><path d='M110 350 C110 260 290 260 290 350 Z' fill='%233b82f6'/><text x='200' y='380' text-anchor='middle' fill='%2394a3b8' font-family='sans-serif' font-size='12'>BIOMETRIC FACIAL VERIFICATION</text></svg>",
-      submittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    linkedWallets: [
-      {
-        id: "w-sample-eth",
-        currency: "ETH",
-        label: "Personal Ledger Nano",
-        address: "0x208ce7fA3Fd4Ce24C21AbC69ef14b87B61A6197F",
-        isDefault: true,
-        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: "w-sample-btc",
-        currency: "BTC",
-        label: "Cold Storage SegWit",
-        address: "bc1qgzdlns0jax6y6x9dwflcs3j8wgne0w0kxussdq",
-        isDefault: true,
-        createdAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: "w-sample-sol",
-        currency: "SOL",
-        label: "Phantom Main Vault",
-        address: "FmBbgLgjVz95XUsD1SBWg7oZQBbYtZXnbBYfFbbNSG9B",
-        isDefault: true,
-        createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-    ],
-    notifications: [],
-  },
-  {
-    id: "USR-102941",
-    name: "Alex Vance",
-    email: "alex@example.com",
-    role: "user",
-    status: "active",
-    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-    baseBalanceUSD: 0,
-    avatar: undefined,
-    kycStatus: "unverified",
-    linkedWallets: [],
-    notifications: [],
-  },
-];
+const EMPTY_USER_ACCOUNT: UserAccount = {
+  id: "",
+  name: "",
+  email: "",
+  role: "user",
+  status: "active",
+  createdAt: new Date().toISOString(),
+  baseBalanceUSD: 0,
+  avatar: undefined,
+  kycStatus: "unverified",
+  linkedWallets: [],
+  notifications: [],
+};
+
+const EMPTY_USER: User = {
+  name: "",
+  email: "",
+  avatar: undefined,
+  isVerified: false,
+  kycStatus: "unverified",
+};
+
+const INITIAL_USERS: UserAccount[] = [];
 
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
       users: INITIAL_USERS,
-      currentUser: INITIAL_USERS[0],
-      user: {
-        name: INITIAL_USERS[0].name,
-        email: INITIAL_USERS[0].email,
-        avatar: undefined,
-        isVerified: false,
-        kycStatus: "pending",
-      },
-      isKycCompleted: false, // Intentional KYC friction gate: starts false to trigger withdrawal gate
+      currentUser: EMPTY_USER_ACCOUNT,
+      user: EMPTY_USER,
+      isKycCompleted: false,
       activeCurrency: 'USD',
       liveRates: DEFAULT_RATES,
       baseBalanceUSD: 0,
@@ -967,9 +925,60 @@ export const useStore = create<AppState>()(
           toastMessage: `KYC for ${userId} rejected.`,
         });
       },
+
+      // Supabase State Hydration & Session Actions
+      setCurrentUser: (userData) => {
+        set((state) => {
+          const updatedCurrent = { ...state.currentUser, ...userData };
+          const fullName = updatedCurrent.name || state.user.name;
+          const userEmail = updatedCurrent.email || state.user.email;
+          const newBaseUSD = updatedCurrent.baseBalanceUSD !== undefined ? updatedCurrent.baseBalanceUSD : state.baseBalanceUSD;
+
+          return {
+            currentUser: updatedCurrent,
+            user: {
+              ...state.user,
+              name: fullName,
+              email: userEmail,
+              avatar: updatedCurrent.avatar ?? state.user.avatar,
+              kycStatus: updatedCurrent.kycStatus || state.user.kycStatus,
+              isVerified: updatedCurrent.kycStatus === 'verified',
+            },
+            baseBalanceUSD: newBaseUSD,
+            cryptoBalances: computeBalances(newBaseUSD, state.liveRates),
+            isKycCompleted: updatedCurrent.kycStatus === 'verified',
+          };
+        });
+      },
+
+      setUsers: (usersList) => set({ users: usersList }),
+      setSavingsPlans: (plans) => set({ savingsPlans: plans }),
+      setTransactions: (txs) => set({ transactions: txs }),
+      setNotifications: (notifs) => set({ notifications: notifs }),
+      setLinkedWallets: (wallets) => {
+        set((state) => {
+          const updated = { ...state.currentUser, linkedWallets: wallets };
+          return {
+            currentUser: updated,
+            users: state.users.map((u) => u.id === state.currentUser.id ? updated : u),
+          };
+        });
+      },
+      resetSession: () => {
+        set({
+          currentUser: EMPTY_USER_ACCOUNT,
+          user: EMPTY_USER,
+          baseBalanceUSD: 0,
+          cryptoBalances: computeBalances(0, DEFAULT_RATES),
+          savingsPlans: [],
+          transactions: [],
+          notifications: [],
+          isKycCompleted: false,
+        });
+      },
     }),
     {
-      name: 'forge-savings-storage-v4',
+      name: 'forge-savings-storage-v5',
     }
   )
 );

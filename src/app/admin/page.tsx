@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { 
   Users,
   ShieldCheck, 
@@ -35,7 +36,8 @@ import {
   Plus,
   Bell,
   Send,
-  Sparkles
+  Sparkles,
+  Loader2
 } from "lucide-react";
 import { useStore, UserAccount, Transaction, LinkedWallet } from "@/lib/store";
 import { 
@@ -47,13 +49,18 @@ import {
 } from "@/lib/format";
 import { ROUTES } from "@/lib/routes";
 import { useHydration } from "@/lib/useHydration";
+import { createClient } from "@/lib/supabase/client";
 
 const ALL_CURRENCIES: CurrencyType[] = ['USD', 'GBP', 'BTC', 'ETH', 'SOL'];
 
 type AdminTab = 'USERS' | 'KYC' | 'DEPOSITS' | 'LEDGER' | 'NOTIFICATIONS';
 
 export default function AdminPage() {
+  const router = useRouter();
   const isHydrated = useHydration();
+  const [isAdminAuthLoading, setIsAdminAuthLoading] = useState(true);
+  const [isDbLoading, setIsDbLoading] = useState(false);
+
   const { 
     users,
     currentUser,
@@ -71,8 +78,110 @@ export default function AdminPage() {
     adminApproveKyc,
     adminRejectKyc,
     adminPushNotification,
-    setToast
+    setToast,
+    setUsers,
+    setTransactions,
   } = useStore();
+
+  // Admin Gateway Session Guard
+  useEffect(() => {
+    let isMounted = true;
+    const verifyAdminSession = async () => {
+      try {
+        const res = await fetch("/api/admin/auth");
+        if (!res.ok) {
+          router.replace(ROUTES.adminLogin);
+          return;
+        }
+        if (isMounted) {
+          setIsAdminAuthLoading(false);
+        }
+      } catch {
+        router.replace(ROUTES.adminLogin);
+      }
+    };
+
+    verifyAdminSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [router]);
+
+  // Supabase Data Binding for Admin Hub
+  const loadAdminDataFromSupabase = useCallback(async () => {
+    setIsDbLoading(true);
+    try {
+      const supabase = createClient();
+
+      // Fetch profiles
+      const { data: dbProfiles, error: profileErr } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (!profileErr && dbProfiles) {
+        const mappedUsers: UserAccount[] = dbProfiles.map((p: any) => ({
+          id: p.id,
+          name: p.name || p.full_name || "Member",
+          email: p.email || "",
+          role: p.role || "user",
+          status: p.status || "active",
+          createdAt: p.created_at || new Date().toISOString(),
+          baseBalanceUSD: Number(p.base_balance_usd ?? p.balance_usd ?? 0),
+          avatar: p.avatar_url || p.avatar || undefined,
+          kycStatus: p.kyc_status || "unverified",
+          linkedWallets: [],
+          kycData: p.kyc_data || undefined,
+          notifications: [],
+        }));
+        setUsers(mappedUsers);
+      }
+
+      // Fetch transactions
+      const { data: dbTxs, error: txErr } = await supabase
+        .from("transactions")
+        .select("*")
+        .order("date", { ascending: false });
+
+      if (!txErr && dbTxs) {
+        const mappedTxs: Transaction[] = dbTxs.map((t: any) => ({
+          id: t.id,
+          date: t.date || t.created_at || new Date().toISOString(),
+          type: t.type,
+          description: t.description || "",
+          amount: Number(t.amount || 0),
+          currency: t.currency || "USD",
+          status: t.status,
+          txHash: t.tx_hash || t.txHash,
+          destinationAddress: t.destination_address || t.destinationAddress,
+          proofImage: t.proof_image || t.proofImage,
+          rejectionReason: t.rejection_reason || t.rejectionReason,
+          userId: t.user_id || t.userId,
+        }));
+        setTransactions(mappedTxs);
+      }
+    } catch (err) {
+      console.error("Error loading admin data from Supabase:", err);
+    } finally {
+      setIsDbLoading(false);
+    }
+  }, [setUsers, setTransactions]);
+
+  useEffect(() => {
+    if (!isAdminAuthLoading) {
+      loadAdminDataFromSupabase();
+    }
+  }, [isAdminAuthLoading, loadAdminDataFromSupabase]);
+
+  const handleAdminSignOut = async () => {
+    try {
+      await fetch("/api/admin/auth", { method: "DELETE" });
+    } catch (err) {
+      console.error("Admin sign out error:", err);
+    }
+    router.replace(ROUTES.adminLogin);
+  };
 
   // Active Main Tab
   const [activeTab, setActiveTab] = useState<AdminTab>('USERS');
@@ -190,13 +299,27 @@ export default function AdminPage() {
     setEditUserEmail(user.email);
   };
 
-  const handleSaveEditUser = (e: React.FormEvent) => {
+  const handleSaveEditUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editUser) return;
+    const trimmedName = editUserName.trim();
+    const trimmedEmail = editUserEmail.trim();
+
     adminUpdateUser(editUser.id, {
-      name: editUserName.trim(),
-      email: editUserEmail.trim(),
+      name: trimmedName,
+      email: trimmedEmail,
     });
+
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("profiles")
+        .update({ name: trimmedName, email: trimmedEmail })
+        .eq("id", editUser.id);
+    } catch (err) {
+      console.error("Failed to sync profile update to Supabase:", err);
+    }
+
     setEditUser(null);
   };
 
@@ -206,13 +329,43 @@ export default function AdminPage() {
     setBalanceAmount((user.baseBalanceUSD || 0).toString());
   };
 
-  const handleSaveBalances = (e: React.FormEvent) => {
+  const handleSaveBalances = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!balancesUser) return;
     const num = parseFloat(balanceAmount);
     if (isNaN(num) || num < 0) return;
+
     adminUpdateUserBalance(balancesUser.id, balanceCurrency, num);
+
+    try {
+      const supabase = createClient();
+      const newBaseUSD = convertCryptoToFiat(num, balanceCurrency, liveRates);
+      await supabase
+        .from("profiles")
+        .update({ base_balance_usd: newBaseUSD })
+        .eq("id", balancesUser.id);
+    } catch (err) {
+      console.error("Failed to sync balance update to Supabase:", err);
+    }
+
     setBalancesUser(null);
+  };
+
+  const handleToggleSuspension = async (userId: string) => {
+    const targetUser = users.find((u) => u.id === userId);
+    const nextStatus = targetUser?.status === 'suspended' ? 'active' : 'suspended';
+
+    adminToggleSuspension(userId);
+
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("profiles")
+        .update({ status: nextStatus })
+        .eq("id", userId);
+    } catch (err) {
+      console.error("Failed to sync suspension to Supabase:", err);
+    }
   };
 
   const handleTriggerResetPassword = (user: UserAccount) => {
@@ -220,34 +373,112 @@ export default function AdminPage() {
     setTempPasswordResult({ user, tempPass });
   };
 
-  const handleConfirmDeleteUser = () => {
+  const handleConfirmDeleteUser = async () => {
     if (!deleteConfirmUser) return;
-    adminDeleteUser(deleteConfirmUser.id);
+    const userId = deleteConfirmUser.id;
+    adminDeleteUser(userId);
+
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", userId);
+    } catch (err) {
+      console.error("Failed to sync deletion to Supabase:", err);
+    }
+
     setDeleteConfirmUser(null);
   };
 
   // KYC Actions Handlers
-  const handleApproveKyc = (userId: string) => {
+  const handleApproveKyc = async (userId: string) => {
     adminApproveKyc(userId);
+
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("profiles")
+        .update({ kyc_status: "verified" })
+        .eq("id", userId);
+    } catch (err) {
+      console.error("Failed to sync KYC approval to Supabase:", err);
+    }
+
     if (inspectKycUser?.id === userId) {
       setInspectKycUser(null);
     }
   };
 
-  const handleConfirmRejectKyc = () => {
+  const handleConfirmRejectKyc = async () => {
     if (!rejectKycUser) return;
-    adminRejectKyc(rejectKycUser.id, kycRejectionReason.trim() || "Verification requirements not met.");
+    const reason = kycRejectionReason.trim() || "Verification requirements not met.";
+    const userId = rejectKycUser.id;
+
+    adminRejectKyc(userId, reason);
+
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("profiles")
+        .update({ kyc_status: "rejected" })
+        .eq("id", userId);
+    } catch (err) {
+      console.error("Failed to sync KYC rejection to Supabase:", err);
+    }
+
     setRejectKycUser(null);
     setKycRejectionReason("");
-    if (inspectKycUser?.id === rejectKycUser.id) {
+    if (inspectKycUser?.id === userId) {
       setInspectKycUser(null);
     }
   };
 
   // Deposit Actions Handlers
-  const handleConfirmRejectDeposit = () => {
+  const handleApproveDeposit = async (txId: string) => {
+    approveDeposit(txId);
+
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("transactions")
+        .update({ status: "COMPLETED" })
+        .eq("id", txId);
+
+      const targetTx = transactions.find((t) => t.id === txId);
+      if (targetTx && targetTx.userId) {
+        const depositAmountUsd = convertCryptoToFiat(targetTx.amount, targetTx.currency, liveRates);
+        const targetUser = users.find((u) => u.id === targetTx.userId);
+        if (targetUser) {
+          const newBal = (targetUser.baseBalanceUSD || 0) + depositAmountUsd;
+          await supabase
+            .from("profiles")
+            .update({ base_balance_usd: newBal })
+            .eq("id", targetTx.userId);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to sync deposit approval to Supabase:", err);
+    }
+  };
+
+  const handleConfirmRejectDeposit = async () => {
     if (!rejectDepositTx) return;
-    rejectDeposit(rejectDepositTx.id, depositRejectReason.trim() || undefined);
+    const txId = rejectDepositTx.id;
+    const reason = depositRejectReason.trim() || undefined;
+
+    rejectDeposit(txId, reason);
+
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("transactions")
+        .update({ status: "REJECTED", rejection_reason: reason })
+        .eq("id", txId);
+    } catch (err) {
+      console.error("Failed to sync deposit rejection to Supabase:", err);
+    }
+
     setRejectDepositTx(null);
     setDepositRejectReason("");
   };
@@ -261,6 +492,17 @@ export default function AdminPage() {
     setPushSentSuccess(true);
     setTimeout(() => setPushSentSuccess(false), 4000);
   };
+
+  if (isAdminAuthLoading) {
+    return (
+      <div className="min-h-screen bg-forge-gray-900 flex items-center justify-center text-white">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 size={32} className="animate-spin text-forge-orange" />
+          <p className="text-xs font-bold font-mono tracking-widest uppercase text-gray-400">Verifying Admin Session...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-forge-gray-50 text-forge-gray-900 pb-20">
@@ -284,9 +526,17 @@ export default function AdminPage() {
               href={ROUTES.app.dashboard}
               className="text-xs font-bold text-forge-gray-600 hover:text-forge-gray-900 px-3 py-1.5 rounded-lg border border-forge-gray-200 hover:bg-forge-gray-50 transition-colors flex items-center gap-1.5"
             >
-              Back to Client Portal <ExternalLink size={12} />
+              Client Portal <ExternalLink size={12} />
             </Link>
-            <div className="flex items-center gap-2 pl-3 border-l border-forge-gray-200 text-xs font-medium text-forge-gray-500">
+            <button
+              type="button"
+              onClick={handleAdminSignOut}
+              className="text-xs font-bold text-red-600 hover:text-white px-3 py-1.5 rounded-lg border border-red-200 hover:bg-red-600 transition-colors flex items-center gap-1.5 shadow-sm"
+            >
+              <Lock size={12} />
+              <span>Sign Out Admin</span>
+            </button>
+            <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-forge-gray-200 text-xs font-medium text-forge-gray-500">
               <span className="w-2 h-2 rounded-full bg-market-up animate-pulse" />
               <span>Full Admin Access</span>
             </div>
@@ -312,9 +562,9 @@ export default function AdminPage() {
           </div>
 
           <div className="text-right text-xs text-forge-gray-500 font-medium bg-white px-4 py-2.5 rounded-xl border border-forge-gray-200 shadow-sm self-start sm:self-auto">
-            <span>Admin Session: </span>
-            <strong className="text-forge-gray-900" suppressHydrationWarning>{isHydrated ? currentUser.name : "Admin"}</strong>
-            <span className="text-forge-gray-400" suppressHydrationWarning> ({isHydrated ? currentUser.id : "USR"})</span>
+            <span>Admin Gateway: </span>
+            <strong className="text-forge-gray-900">Super Administrator</strong>
+            <span className="text-forge-gray-400"> (ROOT-KEY)</span>
           </div>
         </div>
 
@@ -504,8 +754,12 @@ export default function AdminPage() {
             {filteredUsers.length === 0 ? (
               <div className="p-12 text-center text-forge-gray-500">
                 <Users size={36} className="mx-auto text-forge-gray-300 mb-2" />
-                <p className="font-bold text-forge-gray-700">No users match your criteria</p>
-                <p className="text-xs text-forge-gray-400 mt-1">Try clearing filters or search queries.</p>
+                <p className="font-bold text-forge-gray-700">
+                  {users.length === 0 ? "No registered user accounts found in database." : "No users match your criteria"}
+                </p>
+                <p className="text-xs text-forge-gray-400 mt-1">
+                  {users.length === 0 ? "Users will appear here once they register on the platform." : "Try clearing filters or search queries."}
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -685,7 +939,7 @@ export default function AdminPage() {
                               {/* Suspend / Unsuspend */}
                               <button
                                 type="button"
-                                onClick={() => adminToggleSuspension(user.id)}
+                                onClick={() => handleToggleSuspension(user.id)}
                                 className={`p-2 rounded-lg transition-colors ${
                                   user.status === 'active' 
                                     ? "text-forge-gray-600 hover:text-amber-600 hover:bg-amber-50" 
@@ -1055,7 +1309,7 @@ export default function AdminPage() {
                             <div className="inline-flex items-center gap-2">
                               <button
                                 type="button"
-                                onClick={() => approveDeposit(tx.id)}
+                                onClick={() => handleApproveDeposit(tx.id)}
                                 className="px-3.5 py-1.5 bg-market-up hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-colors shadow-sm flex items-center gap-1.5"
                               >
                                 <CheckCircle2 size={14} />

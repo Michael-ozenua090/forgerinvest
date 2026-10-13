@@ -58,7 +58,7 @@ export default function DashboardPage() {
             <Sparkles size={13} /> High-Growth Fixed Savings
           </div>
           <h1 className="font-display font-extrabold text-3xl text-forge-gray-900 tracking-tight" suppressHydrationWarning>
-            Welcome back, {isHydrated ? user.name.split(" ")[0] : "Member"}.
+            Welcome back, {isHydrated && user.name ? user.name.split(" ")[0] : "Member"}.
           </h1>
           <p className="font-medium text-forge-gray-600 mt-1">
             Here is your capital growth and accrued yields summary.
