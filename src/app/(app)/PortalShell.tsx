@@ -24,6 +24,7 @@ import { ROUTES } from "@/lib/routes";
 import { useStore } from "@/lib/store";
 import { CurrencySelector } from "@/components/CurrencySelector";
 import { CryptoDepositModal } from "@/components/CryptoDepositModal";
+import { useHydration } from "@/lib/useHydration";
 
 // Intentional Friction Architecture: KYC link is removed from navigation menus
 const navLinks = [
@@ -36,6 +37,7 @@ const navLinks = [
 ];
 
 export default function PortalShell({ children }: { children: React.ReactNode }) {
+  const isHydrated = useHydration();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [cmdSearch, setCmdSearch] = useState("");
@@ -51,14 +53,16 @@ export default function PortalShell({ children }: { children: React.ReactNode })
     markNotificationsAsRead, 
     isDepositModalOpen, 
     setDepositModalOpen,
-    fetchRates 
+    fetchRates,
+    syncWithBackend 
   } = useStore();
 
   const unreadCount = notifications ? notifications.filter((n: any) => !n.read).length : 0;
 
   useEffect(() => {
     fetchRates();
-  }, [fetchRates]);
+    syncWithBackend();
+  }, [fetchRates, syncWithBackend]);
 
   useEffect(() => {
     if (toastMessage) {
@@ -132,7 +136,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
         {/* User Profile Snippet */}
         <div className="p-6 border-b border-forge-gray-200 shrink-0">
           <Link href={ROUTES.app.settings} className="flex items-center gap-3 mb-3 hover:opacity-80 transition-opacity">
-            {(currentUser?.avatar || user.avatar) ? (
+            {(isHydrated && (currentUser?.avatar || user.avatar)) ? (
               <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-forge-gray-200">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img 
@@ -142,12 +146,14 @@ export default function PortalShell({ children }: { children: React.ReactNode })
                 />
               </div>
             ) : (
-              <div className="w-10 h-10 rounded-full bg-forge-gray-900 text-white flex items-center justify-center font-display font-bold text-sm shrink-0 uppercase">
-                {user.name.split(' ').map(n => n[0]).join('')}
+              <div className="w-10 h-10 rounded-full bg-forge-gray-900 text-white flex items-center justify-center font-display font-bold text-sm shrink-0 uppercase" suppressHydrationWarning>
+                {isHydrated ? user.name.split(' ').map(n => n[0]).join('') : 'MS'}
               </div>
             )}
             <div className="min-w-0">
-              <p className="font-body font-bold text-sm text-forge-gray-900 truncate">{user.name}</p>
+              <p className="font-body font-bold text-sm text-forge-gray-900 truncate" suppressHydrationWarning>
+                {isHydrated ? user.name : "Member"}
+              </p>
               <p className="font-body text-xs text-forge-gray-500">ID: FG-8492</p>
             </div>
           </Link>
@@ -181,7 +187,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
         </nav>
 
         {/* Admin Link - Only visible if user.role === 'admin' */}
-        {currentUser?.role === 'admin' && (
+        {isHydrated && currentUser?.role === 'admin' && (
           <div className="px-3 py-2 border-t border-forge-gray-100">
             <Link 
               href="/admin"
@@ -254,7 +260,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
                 aria-label="View notifications"
               >
                 <Bell size={20} />
-                {unreadCount > 0 && (
+                {isHydrated && unreadCount > 0 && (
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-forge-orange"></span>
                 )}
               </button>
@@ -272,14 +278,14 @@ export default function PortalShell({ children }: { children: React.ReactNode })
                     </button>
                   </div>
                   <div className="max-h-80 overflow-y-auto">
-                    {notifications && notifications.length > 0 ? (
+                    {isHydrated && notifications && notifications.length > 0 ? (
                       <div className="divide-y divide-forge-gray-100">
                         {notifications.map((n: any) => (
                           <div key={n.id} className={`p-4 text-sm ${!n.read ? "bg-forge-orange-wash/30" : "bg-white"}`}>
                             <p className={`font-medium ${!n.read ? "text-forge-gray-900" : "text-forge-gray-600"}`}>
                               {n.message}
                             </p>
-                            <p className="text-[10px] font-bold text-forge-gray-400 mt-1 uppercase tracking-wider">
+                            <p className="text-[10px] font-bold text-forge-gray-400 mt-1 uppercase tracking-wider" suppressHydrationWarning>
                               {new Date(n.timestamp).toLocaleString()}
                             </p>
                           </div>

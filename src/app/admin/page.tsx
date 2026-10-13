@@ -46,12 +46,14 @@ import {
   formatFiat 
 } from "@/lib/format";
 import { ROUTES } from "@/lib/routes";
+import { useHydration } from "@/lib/useHydration";
 
 const ALL_CURRENCIES: CurrencyType[] = ['USD', 'GBP', 'BTC', 'ETH', 'SOL'];
 
 type AdminTab = 'USERS' | 'KYC' | 'DEPOSITS' | 'LEDGER' | 'NOTIFICATIONS';
 
 export default function AdminPage() {
+  const isHydrated = useHydration();
   const { 
     users,
     currentUser,
@@ -311,8 +313,8 @@ export default function AdminPage() {
 
           <div className="text-right text-xs text-forge-gray-500 font-medium bg-white px-4 py-2.5 rounded-xl border border-forge-gray-200 shadow-sm self-start sm:self-auto">
             <span>Admin Session: </span>
-            <strong className="text-forge-gray-900">{currentUser.name}</strong>
-            <span className="text-forge-gray-400"> ({currentUser.id})</span>
+            <strong className="text-forge-gray-900" suppressHydrationWarning>{isHydrated ? currentUser.name : "Admin"}</strong>
+            <span className="text-forge-gray-400" suppressHydrationWarning> ({isHydrated ? currentUser.id : "USR"})</span>
           </div>
         </div>
 
@@ -328,11 +330,11 @@ export default function AdminPage() {
                 <Users size={16} />
               </span>
             </div>
-            <div className="font-display font-extrabold text-3xl text-forge-gray-900">
-              {users.length}
+            <div className="font-display font-extrabold text-3xl text-forge-gray-900" suppressHydrationWarning>
+              {isHydrated ? users.length : 1}
             </div>
-            <p className="text-xs font-medium text-forge-gray-500 mt-1">
-              {users.filter(u => u.status === 'active').length} active • {users.filter(u => u.status === 'suspended').length} suspended
+            <p className="text-xs font-medium text-forge-gray-500 mt-1" suppressHydrationWarning>
+              {isHydrated ? users.filter(u => u.status === 'active').length : 1} active • {isHydrated ? users.filter(u => u.status === 'suspended').length : 0} suspended
             </p>
           </div>
 
@@ -346,11 +348,11 @@ export default function AdminPage() {
                 <UserCheck size={16} />
               </span>
             </div>
-            <div className="font-display font-extrabold text-3xl text-forge-gray-900">
-              {pendingKycUsers.length}
+            <div className="font-display font-extrabold text-3xl text-forge-gray-900" suppressHydrationWarning>
+              {isHydrated ? pendingKycUsers.length : 0}
             </div>
-            <p className="text-xs font-medium text-forge-gray-500 mt-1">
-              {pendingKycUsers.length > 0 ? "Identity proofs pending review" : "All identity proofs verified"}
+            <p className="text-xs font-medium text-forge-gray-500 mt-1" suppressHydrationWarning>
+              {(isHydrated ? pendingKycUsers.length : 0) > 0 ? "Identity proofs pending review" : "All identity proofs verified"}
             </p>
           </div>
 
@@ -364,11 +366,11 @@ export default function AdminPage() {
                 <Clock size={16} />
               </span>
             </div>
-            <div className="font-display font-extrabold text-3xl text-forge-gray-900">
-              {pendingDeposits.length}
+            <div className="font-display font-extrabold text-3xl text-forge-gray-900" suppressHydrationWarning>
+              {isHydrated ? pendingDeposits.length : 0}
             </div>
-            <p className="text-xs font-medium text-forge-gray-500 mt-1">
-              {formatFiat(pendingDepositsUsd)} USD awaiting treasury crediting
+            <p className="text-xs font-medium text-forge-gray-500 mt-1" suppressHydrationWarning>
+              {formatFiat(isHydrated ? pendingDepositsUsd : 0)} USD awaiting treasury crediting
             </p>
           </div>
 
@@ -382,8 +384,8 @@ export default function AdminPage() {
                 <Wallet size={16} />
               </span>
             </div>
-            <div className="font-display font-extrabold text-3xl text-forge-gray-900">
-              {formatFiat(totalSystemValueUsd)}
+            <div className="font-display font-extrabold text-3xl text-forge-gray-900" suppressHydrationWarning>
+              {formatFiat(isHydrated ? totalSystemValueUsd : 0)}
             </div>
             <p className="text-xs font-medium text-forge-gray-500 mt-1">
               Unified single balance across all client vaults

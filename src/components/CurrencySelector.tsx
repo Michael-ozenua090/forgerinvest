@@ -4,6 +4,7 @@ import { useStore, CurrencyType } from "@/lib/store";
 import { ChevronDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import { useHydration } from "@/lib/useHydration";
 
 const CURRENCIES: { id: CurrencyType; name: string; icon: string }[] = [
   { id: "USD", name: "US Dollar", icon: "/currencies/usd.svg" },
@@ -14,6 +15,7 @@ const CURRENCIES: { id: CurrencyType; name: string; icon: string }[] = [
 ];
 
 export function CurrencySelector() {
+  const isHydrated = useHydration();
   const { activeCurrency, setCurrency } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -28,7 +30,8 @@ export function CurrencySelector() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const active = CURRENCIES.find(c => c.id === activeCurrency) || CURRENCIES[0];
+  const effectiveCurrency = isHydrated ? activeCurrency : 'USD';
+  const active = CURRENCIES.find(c => c.id === effectiveCurrency) || CURRENCIES[0];
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -39,7 +42,7 @@ export function CurrencySelector() {
         <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center p-0.5 shrink-0 overflow-hidden">
           <Image src={active.icon} alt={active.name} width={20} height={20} className="w-full h-full object-contain" />
         </div>
-        <span className="text-sm font-bold text-forge-gray-900">{active.id}</span>
+        <span className="text-sm font-bold text-forge-gray-900" suppressHydrationWarning>{active.id}</span>
         <ChevronDown size={14} className="text-forge-gray-500" />
       </button>
 

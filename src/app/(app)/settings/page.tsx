@@ -11,12 +11,14 @@ import {
   Trash2, 
   Upload 
 } from "lucide-react";
+import { useHydration } from "@/lib/useHydration";
 
 export default function SettingsPage() {
+  const isHydrated = useHydration();
   const { user, currentUser, isKycCompleted, updateUserAvatar, setToast } = useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const currentAvatar = currentUser?.avatar || user.avatar;
+  const currentAvatar = isHydrated ? (currentUser?.avatar || user.avatar) : undefined;
 
   const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -80,8 +82,8 @@ export default function SettingsPage() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="font-display font-extrabold text-2xl text-white uppercase">
-                  {user.name.split(" ").map((n) => n[0]).join("")}
+                <span className="font-display font-extrabold text-2xl text-white uppercase" suppressHydrationWarning>
+                  {isHydrated ? user.name.split(" ").map((n) => n[0]).join("") : "MS"}
                 </span>
               )}
             </div>
@@ -124,11 +126,11 @@ export default function SettingsPage() {
           <div className="space-y-3 pt-1">
             <div>
               <p className="text-xs font-bold text-forge-gray-400 uppercase tracking-wider">Account Holder</p>
-              <p className="font-semibold text-forge-gray-900">{user.name}</p>
+              <p className="font-semibold text-forge-gray-900" suppressHydrationWarning>{isHydrated ? user.name : "Member"}</p>
             </div>
             <div>
               <p className="text-xs font-bold text-forge-gray-400 uppercase tracking-wider">Email Address</p>
-              <p className="font-semibold text-forge-gray-900">{user.email}</p>
+              <p className="font-semibold text-forge-gray-900" suppressHydrationWarning>{isHydrated ? user.email : "user@forgecapital.com"}</p>
             </div>
             <div>
               <p className="text-xs font-bold text-forge-gray-400 uppercase tracking-wider">Account ID</p>

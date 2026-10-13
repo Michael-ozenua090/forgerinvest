@@ -27,10 +27,12 @@ import {
 } from "@/lib/format";
 import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
+import { useHydration } from "@/lib/useHydration";
 
 const PRESET_AMOUNTS = [50, 100, 250, 500, 1000];
 
 export default function PlansPage() {
+  const isHydrated = useHydration();
   const { 
     activeCurrency, 
     getBalance, 
@@ -200,10 +202,10 @@ export default function PlansPage() {
             {/* Equivalent in active currency */}
             <div className="mt-3 flex items-center justify-between text-xs font-medium text-forge-gray-500">
               <span>
-                Equal to: <strong className="text-forge-gray-900 tabular-nums">{formatCrypto(capitalInActiveCurrency, activeCurrency)}</strong>
+                Equal to: <strong className="text-forge-gray-900 tabular-nums" suppressHydrationWarning>{isHydrated ? formatCrypto(capitalInActiveCurrency, activeCurrency) : "..."}</strong>
               </span>
               <span>
-                Wallet Balance: <strong className="text-forge-gray-900 tabular-nums">{formatCrypto(availableInActiveCurrency, activeCurrency)}</strong>
+                Wallet Balance: <strong className="text-forge-gray-900 tabular-nums" suppressHydrationWarning>{isHydrated ? formatCrypto(availableInActiveCurrency, activeCurrency) : "..."}</strong>
               </span>
             </div>
           </div>
@@ -230,8 +232,8 @@ export default function PlansPage() {
             <div className="space-y-4 py-4 border-y border-forge-gray-100">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-forge-gray-600 font-medium">Principal Capital</span>
-                <span className="font-bold text-forge-gray-900 tabular-nums">
-                  {formatCrypto(capitalInActiveCurrency, activeCurrency)} ({formatFiat(capitalUsd)})
+                <span className="font-bold text-forge-gray-900 tabular-nums" suppressHydrationWarning>
+                  {isHydrated ? `${formatCrypto(capitalInActiveCurrency, activeCurrency)} (${formatFiat(capitalUsd)})` : "..."}
                 </span>
               </div>
 
@@ -244,8 +246,8 @@ export default function PlansPage() {
 
               <div className="flex justify-between items-center text-sm">
                 <span className="text-forge-gray-600 font-medium">Accrued Interest Profit</span>
-                <span className="font-bold text-market-up tabular-nums">
-                  +{formatCrypto(profitInActiveCurrency, activeCurrency)} (+{formatFiat(profitUsd)})
+                <span className="font-bold text-market-up tabular-nums" suppressHydrationWarning>
+                  {isHydrated ? `+${formatCrypto(profitInActiveCurrency, activeCurrency)} (+${formatFiat(profitUsd)})` : "..."}
                 </span>
               </div>
 
@@ -262,10 +264,10 @@ export default function PlansPage() {
               <span className="block text-xs font-bold uppercase tracking-wider text-forge-gray-600 mb-1">
                 Total Matured Payout
               </span>
-              <div className="font-display font-extrabold text-3xl text-forge-orange tabular-nums">
-                {formatCrypto(payoutInActiveCurrency, activeCurrency)}
+              <div className="font-display font-extrabold text-3xl text-forge-orange tabular-nums" suppressHydrationWarning>
+                {isHydrated ? formatCrypto(payoutInActiveCurrency, activeCurrency) : "..."}
               </div>
-              <p className="text-xs font-medium text-forge-gray-600 mt-1">
+              <p className="text-xs font-medium text-forge-gray-600 mt-1" suppressHydrationWarning>
                 ≈ {formatFiat(payoutUsd)} USD returned upon maturity
               </p>
             </div>

@@ -17,10 +17,12 @@ import {
 import { useStore } from "@/lib/store";
 import { CurrencyType, formatCrypto } from "@/lib/format";
 import Link from "next/link";
+import { useHydration } from "@/lib/useHydration";
 
 const CURRENCY_LIST: CurrencyType[] = ['USD', 'GBP', 'BTC', 'ETH', 'SOL'];
 
 export default function WalletPage() {
+  const isHydrated = useHydration();
   const { 
     getBalance, 
     activeCurrency, 
@@ -88,9 +90,15 @@ export default function WalletPage() {
             Cold Storage Secured
           </div>
           
-          <p className="text-sm font-bold uppercase tracking-wider text-forge-gray-400 mb-2">Available Balance ({activeCurrency})</p>
-          <p className="tabular-nums font-display font-extrabold text-5xl sm:text-6xl text-white mb-8">
-            {formatCrypto(getBalance(activeCurrency), activeCurrency)}
+          <p className="text-sm font-bold uppercase tracking-wider text-forge-gray-400 mb-2" suppressHydrationWarning>
+            Available Balance ({isHydrated ? activeCurrency : 'USD'})
+          </p>
+          <p className="tabular-nums font-display font-extrabold text-5xl sm:text-6xl text-white mb-8" suppressHydrationWarning>
+            {isHydrated ? (
+              formatCrypto(getBalance(activeCurrency), activeCurrency)
+            ) : (
+              <span className="inline-block w-48 h-12 bg-white/10 animate-pulse rounded-xl" />
+            )}
           </p>
 
           <div className="flex flex-wrap items-center gap-4">
@@ -138,7 +146,11 @@ export default function WalletPage() {
           </button>
         </div>
 
-        {linkedWallets.length === 0 ? (
+        {!isHydrated ? (
+          <div className="p-12 text-center text-forge-gray-400 animate-pulse font-medium text-sm">
+            Loading accounts...
+          </div>
+        ) : linkedWallets.length === 0 ? (
           <div className="p-12 text-center text-forge-gray-500">
             <Wallet size={36} className="mx-auto text-forge-gray-300 mb-2" />
             <p className="font-bold text-forge-gray-700">No destination wallets linked yet</p>

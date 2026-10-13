@@ -16,8 +16,10 @@ import { useStore } from "@/lib/store";
 import { formatCrypto, formatFiat, convertFiatToCrypto } from "@/lib/format";
 import { KycGateModal } from "@/components/KycGateModal";
 import { ROUTES } from "@/lib/routes";
+import { useHydration } from "@/lib/useHydration";
 
 export default function PortfolioPage() {
+  const isHydrated = useHydration();
   const { 
     savingsPlans, 
     activeCurrency, 
@@ -89,10 +91,14 @@ export default function PortfolioPage() {
           <span className="text-xs font-bold uppercase tracking-wider text-forge-gray-500">
             Active Capital Locked
           </span>
-          <div className="font-display font-extrabold text-3xl text-forge-gray-900 tabular-nums">
-            {formatCrypto(convertFiatToCrypto(totalActiveCapitalUsd, activeCurrency, liveRates), activeCurrency)}
+          <div className="font-display font-extrabold text-3xl text-forge-gray-900 tabular-nums" suppressHydrationWarning>
+            {isHydrated ? (
+              formatCrypto(convertFiatToCrypto(totalActiveCapitalUsd, activeCurrency, liveRates), activeCurrency)
+            ) : (
+              <span className="inline-block w-28 h-8 bg-forge-gray-200 animate-pulse rounded-lg" />
+            )}
           </div>
-          <p className="text-xs font-medium text-forge-gray-500">
+          <p className="text-xs font-medium text-forge-gray-500" suppressHydrationWarning>
             ≈ {formatFiat(totalActiveCapitalUsd)} USD active in plans
           </p>
         </div>
@@ -101,10 +107,14 @@ export default function PortfolioPage() {
           <span className="text-xs font-bold uppercase tracking-wider text-forge-gray-500">
             Total Accrued Profits
           </span>
-          <div className="font-display font-extrabold text-3xl text-market-up tabular-nums">
-            +{formatCrypto(convertFiatToCrypto(totalProjectedProfitsUsd, activeCurrency, liveRates), activeCurrency)}
+          <div className="font-display font-extrabold text-3xl text-market-up tabular-nums" suppressHydrationWarning>
+            {isHydrated ? (
+              `+${formatCrypto(convertFiatToCrypto(totalProjectedProfitsUsd, activeCurrency, liveRates), activeCurrency)}`
+            ) : (
+              <span className="inline-block w-28 h-8 bg-forge-gray-200 animate-pulse rounded-lg" />
+            )}
           </div>
-          <p className="text-xs font-medium text-forge-gray-500">
+          <p className="text-xs font-medium text-forge-gray-500" suppressHydrationWarning>
             ≈ +{formatFiat(totalProjectedProfitsUsd)} USD contracted profit
           </p>
         </div>
@@ -113,11 +123,15 @@ export default function PortfolioPage() {
           <span className="text-xs font-bold uppercase tracking-wider text-forge-gray-500">
             Matured (Ready to Claim)
           </span>
-          <div className="font-display font-extrabold text-3xl text-forge-orange tabular-nums">
-            {formatCrypto(convertFiatToCrypto(totalMaturedReadyUsd, activeCurrency, liveRates), activeCurrency)}
+          <div className="font-display font-extrabold text-3xl text-forge-orange tabular-nums" suppressHydrationWarning>
+            {isHydrated ? (
+              formatCrypto(convertFiatToCrypto(totalMaturedReadyUsd, activeCurrency, liveRates), activeCurrency)
+            ) : (
+              <span className="inline-block w-28 h-8 bg-forge-gray-200 animate-pulse rounded-lg" />
+            )}
           </div>
-          <p className="text-xs font-medium text-forge-gray-500">
-            {savingsPlans.filter((p) => p.status === "MATURED").length} plan(s) available for payout
+          <p className="text-xs font-medium text-forge-gray-500" suppressHydrationWarning>
+            {isHydrated ? savingsPlans.filter((p) => p.status === "MATURED").length : 0} plan(s) available for payout
           </p>
         </div>
       </div>
@@ -140,7 +154,11 @@ export default function PortfolioPage() {
       </div>
 
       {/* ── Plans List ── */}
-      {filteredPlans.length === 0 ? (
+      {!isHydrated ? (
+        <div className="clean-card bg-white p-12 rounded-2xl border border-forge-gray-200 animate-pulse text-center text-forge-gray-400 font-medium text-sm">
+          Loading investment portfolio...
+        </div>
+      ) : filteredPlans.length === 0 ? (
         <div className="clean-card bg-white p-12 rounded-2xl border border-forge-gray-200 text-center space-y-4">
           <div className="w-16 h-16 rounded-full bg-forge-gray-100 text-forge-gray-400 flex items-center justify-center mx-auto">
             <Briefcase size={28} />
@@ -196,11 +214,11 @@ export default function PortfolioPage() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-forge-gray-500">
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1" suppressHydrationWarning>
                       <Calendar size={13} className="text-forge-gray-400" />
                       Started: {new Date(plan.startDate).toLocaleDateString()}
                     </span>
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1" suppressHydrationWarning>
                       <Clock size={13} className="text-forge-gray-400" />
                       Maturity: {new Date(plan.maturityDate).toLocaleDateString()}
                     </span>

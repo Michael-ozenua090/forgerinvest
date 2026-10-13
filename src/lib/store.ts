@@ -109,9 +109,11 @@ export interface AppState {
   notifications: Notification[];
   toastMessage: string | null;
   isDepositModalOpen: boolean;
+  isSyncing: boolean;
 
   getBalance: (currency: CurrencyType) => number;
   fetchRates: () => Promise<void>;
+  syncWithBackend: () => Promise<void>;
   setDepositModalOpen: (isOpen: boolean) => void;
   setCurrency: (currency: CurrencyType) => void;
   createPlan: (
@@ -260,6 +262,7 @@ export const useStore = create<AppState>()(
       notifications: [],
       toastMessage: null,
       isDepositModalOpen: false,
+      isSyncing: false,
 
       getBalance: (currency) => {
         const state = get();
@@ -280,6 +283,32 @@ export const useStore = create<AppState>()(
           }
         } catch {
           // Graceful fallback to cached rates
+        }
+      },
+
+      syncWithBackend: async () => {
+        set({ isSyncing: true });
+        try {
+          const res = await fetch('/api/user/sync');
+          if (res.ok) {
+            const data = await res.json();
+            // If future backend supplies updated canonical state, update store seamlessly
+            if (data && data.canonicalUser) {
+              set((state) => ({
+                baseBalanceUSD: data.canonicalUser.baseBalanceUSD ?? state.baseBalanceUSD,
+                cryptoBalances: data.canonicalUser.baseBalanceUSD !== undefined 
+                  ? computeBalances(data.canonicalUser.baseBalanceUSD, state.liveRates) 
+                  : state.cryptoBalances,
+                savingsPlans: data.canonicalUser.savingsPlans ?? state.savingsPlans,
+                transactions: data.canonicalUser.transactions ?? state.transactions,
+                notifications: data.canonicalUser.notifications ?? state.notifications,
+              }));
+            }
+          }
+        } catch {
+          // Graceful offline fallback - keeps client-persisted storage intact
+        } finally {
+          set({ isSyncing: false });
         }
       },
 

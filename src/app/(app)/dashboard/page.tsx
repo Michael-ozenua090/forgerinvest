@@ -18,8 +18,10 @@ import {
 import { useStore } from "@/lib/store";
 import { formatCrypto, formatFiat, convertFiatToCrypto } from "@/lib/format";
 import { ROUTES } from "@/lib/routes";
+import { useHydration } from "@/lib/useHydration";
 
 export default function DashboardPage() {
+  const isHydrated = useHydration();
   const { 
     user, 
     savingsPlans, 
@@ -55,8 +57,8 @@ export default function DashboardPage() {
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-forge-orange-wash text-forge-orange rounded-full text-xs font-bold uppercase tracking-wider mb-2 border border-forge-orange/20">
             <Sparkles size={13} /> High-Growth Fixed Savings
           </div>
-          <h1 className="font-display font-extrabold text-3xl text-forge-gray-900 tracking-tight">
-            Welcome back, {user.name.split(" ")[0]}.
+          <h1 className="font-display font-extrabold text-3xl text-forge-gray-900 tracking-tight" suppressHydrationWarning>
+            Welcome back, {isHydrated ? user.name.split(" ")[0] : "Member"}.
           </h1>
           <p className="font-medium text-forge-gray-600 mt-1">
             Here is your capital growth and accrued yields summary.
@@ -80,8 +82,12 @@ export default function DashboardPage() {
             </div>
             <p className="text-xs font-bold uppercase tracking-wider text-forge-gray-500">Total Portfolio Value</p>
           </div>
-          <p className="tabular-nums font-display font-extrabold text-3xl text-forge-gray-900">
-            {formatCrypto(totalPortfolioValueCrypto, activeCurrency)}
+          <p className="tabular-nums font-display font-extrabold text-3xl text-forge-gray-900" suppressHydrationWarning>
+            {isHydrated ? (
+              formatCrypto(totalPortfolioValueCrypto, activeCurrency)
+            ) : (
+              <span className="inline-block w-36 h-8 bg-forge-gray-200 animate-pulse rounded-lg" />
+            )}
           </p>
           <p className="text-xs font-medium text-forge-gray-500 mt-1">
             Liquid assets + active capital + yield
@@ -96,8 +102,12 @@ export default function DashboardPage() {
             </div>
             <p className="text-xs font-bold uppercase tracking-wider text-forge-gray-500">Contracted Profits</p>
           </div>
-          <p className="tabular-nums font-display font-extrabold text-3xl text-market-up">
-            +{formatCrypto(totalAccruedProfitsCrypto, activeCurrency)}
+          <p className="tabular-nums font-display font-extrabold text-3xl text-market-up" suppressHydrationWarning>
+            {isHydrated ? (
+              `+${formatCrypto(totalAccruedProfitsCrypto, activeCurrency)}`
+            ) : (
+              <span className="inline-block w-28 h-8 bg-forge-gray-200 animate-pulse rounded-lg" />
+            )}
           </p>
           <p className="text-xs font-medium text-forge-gray-500 mt-1">
             Guaranteed fixed interest returns
@@ -112,11 +122,15 @@ export default function DashboardPage() {
             </div>
             <p className="text-xs font-bold uppercase tracking-wider text-forge-gray-500">Active Locked Capital</p>
           </div>
-          <p className="tabular-nums font-display font-extrabold text-3xl text-forge-gray-900">
-            {formatCrypto(totalActiveCapitalCrypto, activeCurrency)}
+          <p className="tabular-nums font-display font-extrabold text-3xl text-forge-gray-900" suppressHydrationWarning>
+            {isHydrated ? (
+              formatCrypto(totalActiveCapitalCrypto, activeCurrency)
+            ) : (
+              <span className="inline-block w-32 h-8 bg-forge-gray-200 animate-pulse rounded-lg" />
+            )}
           </p>
-          <p className="text-xs font-medium text-forge-gray-500 mt-1">
-            {activePlans.length} active compounding plan{activePlans.length === 1 ? "" : "s"}
+          <p className="text-xs font-medium text-forge-gray-500 mt-1" suppressHydrationWarning>
+            {isHydrated ? activePlans.length : 0} active compounding plan{(isHydrated ? activePlans.length : 0) === 1 ? "" : "s"}
           </p>
         </div>
 
@@ -128,8 +142,12 @@ export default function DashboardPage() {
             </div>
             <p className="text-xs font-bold uppercase tracking-wider text-forge-gray-500">Available Liquid Wallet</p>
           </div>
-          <p className="tabular-nums font-display font-extrabold text-3xl text-forge-gray-900">
-            {formatCrypto(availableCrypto, activeCurrency)}
+          <p className="tabular-nums font-display font-extrabold text-3xl text-forge-gray-900" suppressHydrationWarning>
+            {isHydrated ? (
+              formatCrypto(availableCrypto, activeCurrency)
+            ) : (
+              <span className="inline-block w-28 h-8 bg-forge-gray-200 animate-pulse rounded-lg" />
+            )}
           </p>
           <p className="text-xs font-medium text-forge-gray-500 mt-1">
             Ready to commit or withdraw
@@ -155,52 +173,12 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {savingsPlans.slice(0, 3).map((plan) => (
-              <div 
-                key={plan.id}
-                className="clean-card bg-white p-5 rounded-2xl border border-forge-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-forge-orange/40 transition-colors"
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-base text-forge-gray-900">
-                      {plan.durationMonths}-Month Fixed Growth
-                    </span>
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                      plan.status === 'MATURED'
-                        ? 'bg-market-up/10 text-market-up border border-market-up/20'
-                        : plan.status === 'ACTIVE'
-                        ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
-                        : 'bg-forge-gray-100 text-forge-gray-500'
-                    }`}>
-                      {plan.status === 'MATURED' ? 'Matured - Ready' : plan.status === 'ACTIVE' ? `Accruing (+${plan.interestRatePercent}%)` : 'Disbursed'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-forge-gray-500">
-                    Matures: {new Date(plan.maturityDate).toLocaleDateString()} • Principal: {formatCrypto(convertFiatToCrypto(plan.capital, plan.currency, liveRates), plan.currency)}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between sm:justify-end gap-6 text-right">
-                  <div>
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-forge-gray-400">
-                      Total Payout
-                    </span>
-                    <span className="font-display font-extrabold text-base text-forge-orange tabular-nums">
-                      {formatCrypto(convertFiatToCrypto(plan.totalPayout, plan.currency, liveRates), plan.currency)}
-                    </span>
-                  </div>
-
-                  <Link 
-                    href={ROUTES.app.portfolio}
-                    className="text-xs font-bold px-3.5 py-2 bg-forge-gray-100 hover:bg-forge-gray-200 text-forge-gray-800 rounded-lg transition-colors"
-                  >
-                    Details
-                  </Link>
-                </div>
+            {!isHydrated ? (
+              <div className="clean-card bg-white p-5 rounded-2xl border border-forge-gray-200 animate-pulse space-y-3">
+                <div className="h-5 bg-forge-gray-200 rounded w-1/3" />
+                <div className="h-4 bg-forge-gray-100 rounded w-1/2" />
               </div>
-            ))}
-
-            {savingsPlans.length === 0 && (
+            ) : savingsPlans.length === 0 ? (
               <div className="clean-card bg-white p-8 rounded-2xl border border-forge-gray-200 text-center">
                 <p className="text-sm text-forge-gray-500 font-medium mb-3">No active growth plans yet.</p>
                 <Link 
@@ -210,6 +188,51 @@ export default function DashboardPage() {
                   Start First Plan
                 </Link>
               </div>
+            ) : (
+              savingsPlans.slice(0, 3).map((plan) => (
+                <div 
+                  key={plan.id}
+                  className="clean-card bg-white p-5 rounded-2xl border border-forge-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-forge-orange/40 transition-colors"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-base text-forge-gray-900">
+                        {plan.durationMonths}-Month Fixed Growth
+                      </span>
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                        plan.status === 'MATURED'
+                          ? 'bg-market-up/10 text-market-up border border-market-up/20'
+                          : plan.status === 'ACTIVE'
+                          ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                          : 'bg-forge-gray-100 text-forge-gray-500'
+                      }`}>
+                        {plan.status === 'MATURED' ? 'Matured - Ready' : plan.status === 'ACTIVE' ? `Accruing (+${plan.interestRatePercent}%)` : 'Disbursed'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-forge-gray-500" suppressHydrationWarning>
+                      Matures: {new Date(plan.maturityDate).toLocaleDateString()} • Principal: {formatCrypto(convertFiatToCrypto(plan.capital, plan.currency, liveRates), plan.currency)}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between sm:justify-end gap-6 text-right">
+                    <div>
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-forge-gray-400">
+                        Total Payout
+                      </span>
+                      <span className="font-display font-extrabold text-base text-forge-orange tabular-nums" suppressHydrationWarning>
+                        {formatCrypto(convertFiatToCrypto(plan.totalPayout, plan.currency, liveRates), plan.currency)}
+                      </span>
+                    </div>
+
+                    <Link 
+                      href={ROUTES.app.portfolio}
+                      className="text-xs font-bold px-3.5 py-2 bg-forge-gray-100 hover:bg-forge-gray-200 text-forge-gray-800 rounded-lg transition-colors"
+                    >
+                      Details
+                    </Link>
+                  </div>
+                </div>
+              ))
             )}
           </div>
 
@@ -263,7 +286,11 @@ export default function DashboardPage() {
           </div>
 
           <div className="clean-card bg-white p-0 rounded-2xl border border-forge-gray-200 overflow-hidden shadow-sm">
-            {transactions.length === 0 ? (
+            {!isHydrated ? (
+              <div className="p-8 text-center text-forge-gray-400 text-sm font-medium animate-pulse">
+                Loading activity...
+              </div>
+            ) : transactions.length === 0 ? (
               <div className="p-8 text-center text-forge-gray-500 text-sm font-medium">
                 No recent activity.
               </div>
@@ -284,14 +311,14 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-forge-gray-900 truncate">{tx.description}</p>
-                      <p className="text-[10px] font-bold text-forge-gray-400 uppercase tracking-wider flex items-center gap-1 mt-0.5">
+                      <p className="text-[10px] font-bold text-forge-gray-400 uppercase tracking-wider flex items-center gap-1 mt-0.5" suppressHydrationWarning>
                         <Clock size={10} /> {new Date(tx.date).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className={`tabular-nums text-xs font-bold ${
                         tx.amount > 0 ? 'text-market-up' : 'text-forge-gray-900'
-                      }`}>
+                      }`} suppressHydrationWarning>
                         {tx.amount > 0 ? '+' : ''}{formatCrypto(Math.abs(tx.amount), tx.currency)}
                       </p>
                     </div>

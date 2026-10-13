@@ -4,8 +4,10 @@ import Link from "next/link";
 import { ArrowLeft, ArrowUpFromLine, ArrowDownToLine, RefreshCw, CheckCircle2, History, Clock, XCircle } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { formatCrypto } from "@/lib/format";
+import { useHydration } from "@/lib/useHydration";
 
 export default function TransactionsLedgerPage() {
+  const isHydrated = useHydration();
   const { transactions } = useStore();
 
   const getIcon = (type: string) => {
@@ -42,7 +44,11 @@ export default function TransactionsLedgerPage() {
       </div>
 
       <div className="clean-card overflow-hidden">
-        {transactions.length === 0 ? (
+        {!isHydrated ? (
+          <div className="p-12 text-center text-forge-gray-400 animate-pulse font-medium text-sm">
+            Loading transaction ledger...
+          </div>
+        ) : transactions.length === 0 ? (
           <div className="p-12 text-center text-forge-gray-500 flex flex-col items-center">
             <History size={48} className="text-forge-gray-200 mb-4" />
             <p className="font-bold">No transactions found.</p>
@@ -63,10 +69,10 @@ export default function TransactionsLedgerPage() {
               {transactions.map((tx) => (
                 <tr key={tx.id} className="hover:bg-forge-gray-50/50 transition-colors">
                   <td className="py-4 px-6 whitespace-nowrap">
-                    <p className="text-sm font-bold text-forge-gray-900">
+                    <p className="text-sm font-bold text-forge-gray-900" suppressHydrationWarning>
                       {new Date(tx.date).toLocaleDateString()}
                     </p>
-                    <p className="text-xs font-bold text-forge-gray-400">
+                    <p className="text-xs font-bold text-forge-gray-400" suppressHydrationWarning>
                       {new Date(tx.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </p>
                   </td>

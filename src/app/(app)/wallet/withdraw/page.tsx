@@ -20,8 +20,10 @@ import {
 import { useStore, LinkedWallet } from "@/lib/store";
 import { formatCrypto } from "@/lib/format";
 import { KycGateModal } from "@/components/KycGateModal";
+import { useHydration } from "@/lib/useHydration";
 
 export default function WithdrawPage() {
+  const isHydrated = useHydration();
   const router = useRouter();
   const { 
     getBalance, 
@@ -175,7 +177,7 @@ export default function WithdrawPage() {
               </div>
               <div className="flex justify-between items-center mt-3">
                 <p className="text-xs font-bold text-forge-gray-500 tabular-nums">
-                  Available Balance: <strong className="text-forge-gray-800">{formatCrypto(availableCrypto, activeCurrency)}</strong>
+                  Available Balance: <strong className="text-forge-gray-800" suppressHydrationWarning>{isHydrated ? formatCrypto(availableCrypto, activeCurrency) : "..."}</strong>
                 </p>
                 <button 
                   type="button"
@@ -190,8 +192,8 @@ export default function WithdrawPage() {
             {/* Destination Account Selection */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <label className="block text-xs font-bold uppercase tracking-wider text-forge-gray-600">
-                  Designated Destination Account ({activeCurrency})
+                <label className="block text-xs font-bold uppercase tracking-wider text-forge-gray-600" suppressHydrationWarning>
+                  Designated Destination Account ({isHydrated ? activeCurrency : 'USD'})
                 </label>
                 <button
                   type="button"
