@@ -1,15 +1,33 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ShieldCheck, CheckCircle2, Loader2, FileCheck } from "lucide-react";
+import { 
+  ShieldCheck, 
+  CheckCircle2, 
+  Loader2, 
+  FileCheck, 
+  Clock, 
+  AlertCircle,
+  ShieldAlert
+} from "lucide-react";
 import { useStore } from "@/lib/store";
 import { createClient } from "@/lib/supabase/client";
 
+const fileToDataUrl = (file: File | null): Promise<string | null> => {
+  if (!file) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.readAsDataURL(file);
+  });
+};
+
 export default function KYCPage() {
-  const { user, completeKYC, setToast } = useStore();
+  const { user, currentUser, completeKYC, setToast } = useStore();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [dbKycStatus, setDbKycStatus] = useState<string | null>(null);
 
   // Form Fields matching exact IDs from TESA kyc.html
   const [formData, setFormData] = useState({
@@ -38,10 +56,11 @@ export default function KYCPage() {
   const backInputRef = useRef<HTMLInputElement>(null);
   const selfieInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto pre-populate user name if available in store
+  // Auto pre-populate user name from store and load real status from Supabase
   useEffect(() => {
-    if (user?.name) {
-      const parts = user.name.split(" ");
+    const activeUser = currentUser || user;
+    if (activeUser?.name) {
+      const parts = activeUser.name.split(" ");
       setFormData((prev) => ({
         ...prev,
         first_name: prev.first_name || parts[0] || "",
@@ -50,7 +69,37 @@ export default function KYCPage() {
         country: prev.country || "United States",
       }));
     }
-  }, [user]);
+
+    async function loadUserKycFromSupabase() {
+      try {
+        const supabase = createClient();
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('kyc_status, name')
+            .eq('id', authUser.id)
+            .maybeSingle();
+
+          if (profile?.kyc_status) {
+            setDbKycStatus(profile.kyc_status);
+          }
+          if (profile?.name) {
+            const parts = profile.name.split(" ");
+            setFormData((prev) => ({
+              ...prev,
+              first_name: prev.first_name || parts[0] || "",
+              last_name: prev.last_name || parts.slice(1).join(" ") || "",
+            }));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load KYC status from Supabase:", err);
+      }
+    }
+
+    loadUserKycFromSupabase();
+  }, [currentUser, user]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -65,28 +114,87 @@ export default function KYCPage() {
 
     try {
       const supabase = createClient();
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) {
-        await supabase
-          .from("profiles")
-          .update({
-            kyc_status: "pending",
-            kyc_data: formData,
-          })
-          .eq("id", authUser.id);
-      }
-    } catch (err) {
-      console.error("KYC submission error:", err);
-    }
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
 
-    completeKYC(formData);
-    setIsSubmitting(false);
-    setSubmitted(true);
-    setToast("KYC verification documents submitted successfully. Pending compliance review.");
+      if (!authUser || authError) {
+        setToast("Please log in to submit identity verification.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // 1. Convert uploaded ID documents & selfie to data URLs
+      const [frontUrl, backUrl, selfieUrl] = await Promise.all([
+        fileToDataUrl(frontFile),
+        fileToDataUrl(backFile),
+        fileToDataUrl(selfieFile),
+      ]);
+
+      // 2. Insert into kyc_submissions table
+      const { error: insertError } = await supabase
+        .from('kyc_submissions')
+        .insert({
+          user_id: authUser.id,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          date_of_birth: formData.date_of_birth || null,
+          nationality: formData.nationality,
+          document_type: formData.document_type,
+          document_number: formData.document_number,
+          document_expiry_date: formData.document_expiry_date || null,
+          phone_number: formData.phone_number,
+          address_line_1: formData.address_line_1,
+          address_line_2: formData.address_line_2,
+          city: formData.city,
+          state_province: formData.state_province,
+          postal_code: formData.postal_code,
+          country: formData.country,
+          front_file_url: frontUrl,
+          back_file_url: backUrl,
+          selfie_file_url: selfieUrl,
+          status: 'pending',
+        });
+
+      if (insertError) {
+        console.error("KYC insert error:", insertError);
+        setToast(`Submission failed: ${insertError.message}`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // 3. Update profile kyc_status to 'pending'
+      await supabase
+        .from('profiles')
+        .update({ 
+          kyc_status: 'pending',
+          kyc_data: formData
+        })
+        .eq('id', authUser.id);
+
+      // 4. Update local state
+      completeKYC(formData);
+      setDbKycStatus('pending');
+      setSubmitted(true);
+      setToast("KYC verification documents submitted for admin review.");
+    } catch (err: any) {
+      console.error("KYC unexpected error:", err);
+      setToast(err.message || "An unexpected error occurred during submission.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const isVerified = user.kycStatus === "verified" || submitted;
-  const statusDisplay = isVerified ? "Verified" : "Not Submitted";
+  const currentKycStatus = submitted 
+    ? 'pending' 
+    : (dbKycStatus || currentUser?.kycStatus || user?.kycStatus || 'unverified');
+
+  const statusTitleDisplay = 
+    currentKycStatus === 'verified'
+      ? "Verified"
+      : currentKycStatus === 'pending'
+      ? "Pending Review"
+      : currentKycStatus === 'rejected'
+      ? "Rejected"
+      : "Not Submitted";
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -116,21 +224,26 @@ export default function KYCPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 lg:ml-6 lg:justify-end">
-              <div className="bg-white/10 backdrop-blur-xl rounded-xl p-4 border border-white/20 shadow-xl lg:w-64">
+              <div className="bg-white/10 backdrop-blur-xl rounded-xl p-4 border border-white/20 shadow-xl lg:w-72">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-forge-gray-300 mb-1">
                       Verification Status
                     </p>
                     <p className="text-lg font-light text-white">
-                      {statusDisplay}
+                      {statusTitleDisplay}
                     </p>
                   </div>
                   <div className="w-10 h-10 flex items-center justify-center">
-                    <ShieldCheck
-                      className={isVerified ? "text-market-up" : "text-white"}
-                      size={24}
-                    />
+                    {currentKycStatus === 'verified' ? (
+                      <ShieldCheck className="text-market-up" size={26} />
+                    ) : currentKycStatus === 'pending' ? (
+                      <Clock className="text-amber-400" size={24} />
+                    ) : currentKycStatus === 'rejected' ? (
+                      <ShieldAlert className="text-market-down" size={24} />
+                    ) : (
+                      <ShieldCheck className="text-white/60" size={24} />
+                    )}
                   </div>
                 </div>
               </div>
@@ -139,13 +252,45 @@ export default function KYCPage() {
         </div>
       </div>
 
-      {/* ── Submission Confirmation Banner ── */}
-      {submitted && (
-        <div className="rounded-xl border border-market-up/30 bg-market-up/10 p-4 text-market-up flex items-center gap-3 animate-in fade-in duration-300">
-          <CheckCircle2 size={24} className="shrink-0" />
+      {/* ── Status Badge Banner ── */}
+      {currentKycStatus === 'pending' && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-500 flex items-center gap-3 animate-in fade-in duration-300 shadow-sm">
+          <Clock size={22} className="shrink-0 text-amber-400" />
           <div>
-            <p className="font-bold text-sm">KYC Verification Submitted Successfully</p>
-            <p className="text-xs opacity-90">Your account is verified. You now have full clearance to withdraw matured capital and interest payouts.</p>
+            <p className="font-bold text-sm text-amber-400">
+              Pending Review — Your documents are currently under review by compliance.
+            </p>
+            <p className="text-xs text-amber-300/80 mt-0.5">
+              Submissions are typically reviewed within 24 hours. You will receive an automated notification once approved.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {currentKycStatus === 'verified' && (
+        <div className="rounded-xl border border-market-up/30 bg-market-up/10 p-4 text-market-up flex items-center gap-3 animate-in fade-in duration-300 shadow-sm">
+          <CheckCircle2 size={22} className="shrink-0 text-market-up" />
+          <div>
+            <p className="font-bold text-sm">
+              Verified — Full withdrawal access authorized.
+            </p>
+            <p className="text-xs opacity-90 mt-0.5">
+              Your identity has been confirmed by our compliance team. Capital withdrawals and profits distributions are fully unlocked.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {currentKycStatus === 'rejected' && (
+        <div className="rounded-xl border border-market-down/30 bg-market-down/10 p-4 text-market-down flex items-center gap-3 animate-in fade-in duration-300 shadow-sm">
+          <AlertCircle size={22} className="shrink-0 text-market-down" />
+          <div>
+            <p className="font-bold text-sm">
+              Rejected — Please re-submit your documents.
+            </p>
+            <p className="text-xs opacity-90 mt-0.5">
+              Your previous submission could not be verified. Please ensure your photo ID is clear, fully visible, and not expired, then submit again.
+            </p>
           </div>
         </div>
       )}
@@ -538,13 +683,19 @@ export default function KYCPage() {
             <button
               className="w-full px-6 py-3 bg-forge-orange text-white font-medium rounded-lg hover:bg-forge-orange-hover transition-colors duration-200 disabled:opacity-60 flex items-center justify-center gap-2"
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || currentKycStatus === 'verified' || currentKycStatus === 'pending'}
             >
               {isSubmitting ? (
                 <>
                   <Loader2 size={18} className="animate-spin" />
                   Submitting KYC Verification...
                 </>
+              ) : currentKycStatus === 'verified' ? (
+                "Identity Verified"
+              ) : currentKycStatus === 'pending' ? (
+                "Verification In Review"
+              ) : currentKycStatus === 'rejected' ? (
+                "Re-Submit KYC Verification"
               ) : (
                 "Submit KYC Verification"
               )}
