@@ -87,7 +87,7 @@ export default function WalletPage() {
             </div>
             <div>
               <p className="font-bold text-forge-gray-900">MetaMask</p>
-              <p className="text-xs font-bold text-forge-gray-500 uppercase tracking-wider">0x71C8...9A64</p>
+              <p className="text-xs font-bold text-forge-gray-500 uppercase tracking-wider">0x208c...197F</p>
             </div>
           </div>
           <span className="px-2.5 py-1 bg-market-up/10 text-market-up text-[10px] font-bold uppercase tracking-wider rounded-md">

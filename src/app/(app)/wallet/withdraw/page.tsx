@@ -105,7 +105,7 @@ export default function WithdrawPage() {
                   </div>
                   <div>
                     <p className="font-bold text-forge-gray-900">Connected Wallet</p>
-                    <p className="text-xs font-bold text-forge-gray-500 uppercase tracking-wider mt-0.5">0x71C8...9A64</p>
+                    <p className="text-xs font-bold text-forge-gray-500 uppercase tracking-wider mt-0.5">0x208c...197F</p>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-market-up bg-market-up/10 px-2.5 py-1 rounded-full">Primary</span>
