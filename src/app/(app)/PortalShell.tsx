@@ -86,6 +86,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
     { name: "Active Growth Portfolio", type: "Portfolio", href: "/portfolio" },
     { name: "Deposit Capital", type: "Wallet", href: "/wallet" },
     { name: "Withdraw Funds", type: "Wallet", href: "/wallet/withdraw" },
+    { name: "Treasury Admin Portal", type: "Admin", href: "/admin" },
   ].filter(s => s.name.toLowerCase().includes(cmdSearch.toLowerCase()));
 
   return (
@@ -167,6 +168,18 @@ export default function PortalShell({ children }: { children: React.ReactNode })
             );
           })}
         </nav>
+
+        {/* Admin Link */}
+        <div className="px-3 py-2 border-t border-forge-gray-100">
+          <Link 
+            href="/admin"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-3 px-3 py-2 text-xs font-bold text-forge-gray-500 hover:text-forge-orange hover:bg-forge-orange-wash rounded-lg transition-colors"
+          >
+            <ShieldCheck size={16} />
+            <span>Treasury Admin</span>
+          </Link>
+        </div>
 
         {/* Sign Out */}
         <div className="p-4 border-t border-forge-gray-200 shrink-0">

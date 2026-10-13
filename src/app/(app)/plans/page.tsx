@@ -8,10 +8,13 @@ import {
   ArrowRight, 
   Sparkles, 
   CheckCircle2, 
-  Info,
-  Calendar,
-  Lock,
-  Percent
+  Info, 
+  Calendar, 
+  Lock, 
+  Percent, 
+  AlertCircle, 
+  X, 
+  ArrowDownToLine 
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { 
@@ -32,13 +35,15 @@ export default function PlansPage() {
     activeCurrency, 
     cryptoBalances, 
     liveRates, 
-    createPlan 
+    createPlan,
+    setDepositModalOpen 
   } = useStore();
 
   const [selectedDuration, setSelectedDuration] = useState<PlanDurationMonths>(3);
   const [capitalUsd, setCapitalUsd] = useState<number>(500);
   const [customInput, setCustomInput] = useState<string>("500");
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showInsufficientModal, setShowInsufficientModal] = useState(false);
 
   // Convert capital to active currency amount
   const capitalInActiveCurrency = convertFiatToCrypto(capitalUsd, activeCurrency, liveRates);
@@ -67,6 +72,10 @@ export default function PlansPage() {
 
   const handleStartPlan = () => {
     if (capitalUsd < 50) return;
+    if (capitalInActiveCurrency > availableInActiveCurrency) {
+      setShowInsufficientModal(true);
+      return;
+    }
     const success = createPlan(capitalInActiveCurrency, activeCurrency, selectedDuration);
     if (success) {
       setIsSuccess(true);
@@ -270,17 +279,11 @@ export default function PlansPage() {
             ) : (
               <button
                 onClick={handleStartPlan}
-                disabled={capitalUsd < 50 || capitalInActiveCurrency > availableInActiveCurrency}
+                disabled={capitalUsd < 50}
                 className="w-full py-4 bg-forge-orange text-white font-bold rounded-xl hover:bg-forge-orange-hover transition-colors shadow-[0_4px_14px_rgba(255,90,0,0.25)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base"
               >
-                {capitalInActiveCurrency > availableInActiveCurrency ? (
-                  "Insufficient Balance"
-                ) : (
-                  <>
-                    Start Savings Plan
-                    <ArrowRight size={18} />
-                  </>
-                )}
+                <span>Start Savings Plan</span>
+                <ArrowRight size={18} />
               </button>
             )}
 
@@ -384,6 +387,80 @@ export default function PlansPage() {
           </p>
         </div>
       </div>
+
+      {/* ── Insufficient Funds Modal ── */}
+      {showInsufficientModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-forge-gray-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-forge-gray-100">
+            <div className="px-6 py-4 border-b border-forge-gray-100 flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-forge-gray-400">Account Balance Notice</span>
+              <button 
+                onClick={() => setShowInsufficientModal(false)}
+                className="text-forge-gray-400 hover:text-forge-gray-600 transition-colors p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 text-center space-y-4">
+              <div className="w-16 h-16 mx-auto rounded-full bg-forge-orange-wash text-forge-orange flex items-center justify-center border border-forge-orange/20">
+                <AlertCircle size={32} />
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-display font-extrabold text-2xl text-forge-gray-900">
+                  Account Funding Required
+                </h3>
+                <p className="text-sm font-medium text-forge-gray-600 leading-relaxed px-2">
+                  You need <strong className="text-forge-gray-900">{formatCrypto(capitalInActiveCurrency, activeCurrency)}</strong> ({formatFiat(capitalUsd)}) to activate this <strong className="text-forge-gray-900">{planInfo.label} Growth Plan</strong>, but your available balance is <strong className="text-forge-gray-900">{formatCrypto(availableInActiveCurrency, activeCurrency)}</strong>.
+                </p>
+              </div>
+
+              <div className="bg-forge-gray-50 rounded-xl p-4 border border-forge-gray-200 text-left text-xs space-y-2 font-medium">
+                <div className="flex justify-between">
+                  <span className="text-forge-gray-500">Plan:</span>
+                  <span className="font-bold text-forge-gray-900">{planInfo.label} (+{planInfo.ratePercent}%)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-forge-gray-500">Required Capital:</span>
+                  <span className="font-bold text-forge-gray-900">{formatCrypto(capitalInActiveCurrency, activeCurrency)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-forge-gray-500">Available Balance:</span>
+                  <span className="font-bold text-forge-gray-900">{formatCrypto(availableInActiveCurrency, activeCurrency)}</span>
+                </div>
+                <div className="flex justify-between items-center pt-1 border-t border-forge-gray-200">
+                  <span className="text-forge-gray-500">Shortfall to Fund:</span>
+                  <span className="font-bold text-forge-orange">
+                    {formatCrypto(Math.max(0, capitalInActiveCurrency - availableInActiveCurrency), activeCurrency)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowInsufficientModal(false);
+                    setDepositModalOpen(true);
+                  }}
+                  className="w-full py-4 bg-forge-orange text-white font-bold rounded-xl hover:bg-forge-orange-hover transition-colors shadow-[0_4px_14px_rgba(255,90,0,0.25)] flex items-center justify-center gap-2 text-base"
+                >
+                  <ArrowDownToLine size={18} />
+                  <span>Deposit Funds Now</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowInsufficientModal(false)}
+                  className="w-full py-2.5 text-xs font-bold text-forge-gray-500 hover:text-forge-gray-900 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

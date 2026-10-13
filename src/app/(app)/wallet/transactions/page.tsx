@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ArrowUpFromLine, ArrowDownToLine, RefreshCw, CheckCircle2, History } from "lucide-react";
+import { ArrowLeft, ArrowUpFromLine, ArrowDownToLine, RefreshCw, CheckCircle2, History, Clock, XCircle } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { formatCrypto } from "@/lib/format";
 
@@ -87,9 +87,19 @@ export default function TransactionsLedgerPage() {
                     {getFormat(tx.type, Math.abs(tx.amount), tx.currency)}
                   </td>
                   <td className="py-4 px-6 text-right">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-market-up/10 text-market-up text-[10px] font-bold uppercase tracking-wider rounded-md">
-                      <CheckCircle2 size={12} /> {tx.status}
-                    </span>
+                    {tx.status === 'COMPLETED' ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-market-up/10 text-market-up text-[10px] font-bold uppercase tracking-wider rounded-md">
+                        <CheckCircle2 size={12} /> Completed
+                      </span>
+                    ) : tx.status === 'PENDING' ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[10px] font-bold uppercase tracking-wider rounded-md">
+                        <Clock size={12} /> Pending
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-market-down/10 text-market-down text-[10px] font-bold uppercase tracking-wider rounded-md">
+                        <XCircle size={12} /> Rejected
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}

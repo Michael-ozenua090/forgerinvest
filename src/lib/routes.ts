@@ -3,6 +3,7 @@
  */
 
 export const ROUTES = {
+  admin: "/admin",
   marketing: {
     home: "/",
     marketplace: "/plans", // Redirects marketing directory to plans
