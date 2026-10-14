@@ -13,11 +13,33 @@ import {
 import { useStore } from "@/lib/store";
 import { createClient } from "@/lib/supabase/client";
 
-const fileToDataUrl = (file: File | null): Promise<string | null> => {
+const compressImage = (file: File | null, maxWidth = 1200, quality = 0.7): Promise<string | null> => {
   if (!file) return Promise.resolve(null);
   return new Promise((resolve) => {
     const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        // Compress to lightweight JPEG data URL (~100KB-150KB)
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedDataUrl);
+      };
+      img.src = e.target?.result as string;
+    };
     reader.readAsDataURL(file);
   });
 };
@@ -122,11 +144,11 @@ export default function KYCPage() {
         return;
       }
 
-      // 1. Convert uploaded ID documents & selfie to data URLs
+      // 1. Convert and compress uploaded ID documents & selfie to data URLs
       const [frontUrl, backUrl, selfieUrl] = await Promise.all([
-        fileToDataUrl(frontFile),
-        fileToDataUrl(backFile),
-        fileToDataUrl(selfieFile),
+        compressImage(frontFile),
+        compressImage(backFile),
+        compressImage(selfieFile),
       ]);
 
       // 2. Insert into kyc_submissions table

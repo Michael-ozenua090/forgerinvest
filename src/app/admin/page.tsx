@@ -68,6 +68,7 @@ export default function AdminPage() {
     transactions, 
     notifications,
     liveRates,
+    toastMessage,
     approveDeposit, 
     rejectDeposit, 
     adminUpdateUser,
@@ -82,6 +83,14 @@ export default function AdminPage() {
     setUsers,
     setTransactions,
   } = useStore();
+
+  // Auto-dismiss Toast Notifications
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage, setToast]);
 
   // Admin Gateway Session Guard
   useEffect(() => {
@@ -210,6 +219,10 @@ export default function AdminPage() {
   const [balancesUser, setBalancesUser] = useState<UserAccount | null>(null);
   const [balanceCurrency, setBalanceCurrency] = useState<CurrencyType>('USD');
   const [balanceAmount, setBalanceAmount] = useState<string>('');
+  const [isSavingBalance, setIsSavingBalance] = useState(false);
+  const setShowBalanceModal = (open: boolean) => {
+    if (!open) setBalancesUser(null);
+  };
 
   const [tempPasswordResult, setTempPasswordResult] = useState<{ user: UserAccount; tempPass: string } | null>(null);
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<UserAccount | null>(null);
@@ -341,86 +354,68 @@ export default function AdminPage() {
   };
 
   const handleUpdateBalance = async (userId: string, newBalanceUSD: number) => {
-    const supabase = createClient();
-    
-    // 1. Update user profile in Supabase
-    let { error: profileError } = await supabase
-      .from('profiles')
-      .update({ 
-        base_balance_usd: newBalanceUSD,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', userId);
+    if (isSavingBalance) return;
+    setIsSavingBalance(true);
 
-    if (profileError) {
-      console.warn("Direct Supabase update encountered error, delegating to Service Role Gateway:", profileError);
-      // Fallback through Service Role API
-      try {
-        const res = await fetch("/api/admin/data", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "update_balance",
-            userId,
-            newBalanceUSD,
-          }),
-        });
-        if (res.ok) {
-          profileError = null;
-        }
-      } catch (err) {
-        console.error("Admin gateway balance update backup error:", err);
-      }
-    } else {
-      // Also sync to gateway to ensure transactions log and database state
-      try {
-        await fetch("/api/admin/data", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "update_balance",
-            userId,
-            newBalanceUSD,
-          }),
-        });
-      } catch {}
-    }
+    const targetAmount = Number(newBalanceUSD);
+    const formattedAmount = targetAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    if (profileError) {
-      console.error("Failed to update balance:", profileError);
-      alert(`Error updating balance: ${profileError.message}`);
-      return;
-    }
-
-    // 2. Log an administrative funding transaction
     try {
-      await supabase
-        .from('transactions')
-        .insert({
-          user_id: userId,
-          type: 'DEPOSIT',
-          description: 'Administrative Treasury Credit',
-          amount: newBalanceUSD,
-          currency: 'USD',
-          status: 'COMPLETED',
-        });
-    } catch {}
+      // 1. Direct browser Supabase update for immediate local reactivity
+      try {
+        const supabase = createClient();
+        await supabase
+          .from('profiles')
+          .update({ 
+            base_balance_usd: targetAmount,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId);
+      } catch (clientErr) {
+        console.warn("Direct Supabase update skipped/failed, API Gateway will handle Service Role update:", clientErr);
+      }
 
-    // 3. Update local admin state
-    adminUpdateUserBalance(userId, 'USD', newBalanceUSD);
-    setUsers(users.map(u => u.id === userId ? { ...u, baseBalanceUSD: newBalanceUSD } : u));
-    alert("User balance updated and saved to database successfully.");
+      // 2. Perform admin action via API gateway (Service Role RLS bypass)
+      const res = await fetch("/api/admin/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_balance",
+          payload: {
+            userId,
+            amount: targetAmount,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || "Failed to update balance via Admin Gateway");
+      }
+
+      // 3. Update local admin store state
+      adminUpdateUserBalance(userId, 'USD', targetAmount);
+      setUsers(users.map(u => u.id === userId ? { ...u, baseBalanceUSD: targetAmount } : u));
+
+      // 4. Immediately close the modal and display confirmation toast
+      setShowBalanceModal(false);
+      setToast(`Balance updated successfully to $${formattedAmount}.`);
+    } catch (err: any) {
+      console.error("Failed to update balance:", err);
+      setToast(`Error updating balance: ${err?.message || "Failed"}`);
+    } finally {
+      setIsSavingBalance(false);
+    }
   };
 
   const handleSaveBalances = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!balancesUser) return;
+    if (!balancesUser || isSavingBalance) return;
     const num = parseFloat(balanceAmount);
     if (isNaN(num) || num < 0) return;
 
     const newBaseUSD = convertCryptoToFiat(num, balanceCurrency, liveRates);
     await handleUpdateBalance(balancesUser.id, newBaseUSD);
-    setBalancesUser(null);
   };
 
   const handleToggleSuspension = async (userId: string) => {
@@ -505,8 +500,10 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "approve_kyc",
-          userId,
-          submissionId,
+          payload: {
+            userId,
+            submissionId,
+          },
         }),
       });
     } catch (err) {
@@ -565,9 +562,11 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "reject_kyc",
-          userId,
-          submissionId,
-          reason,
+          payload: {
+            userId,
+            submissionId,
+            reason,
+          },
         }),
       });
     } catch (err) {
@@ -1980,8 +1979,13 @@ export default function AdminPage() {
                 <button type="button" onClick={() => setBalancesUser(null)} className="px-4 py-2.5 text-xs font-bold text-forge-gray-600 hover:text-forge-gray-900">
                   Cancel
                 </button>
-                <button type="submit" className="px-5 py-2.5 bg-forge-gray-900 text-white text-xs font-bold rounded-xl hover:bg-black transition-colors shadow-sm">
-                  Save & Update Balance
+                <button
+                  type="submit"
+                  disabled={isSavingBalance}
+                  className="px-5 py-2.5 bg-forge-gray-900 text-white text-xs font-bold rounded-xl hover:bg-black transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isSavingBalance && <Loader2 size={14} className="animate-spin" />}
+                  <span>{isSavingBalance ? "Saving..." : "Save & Update Balance"}</span>
                 </button>
               </div>
             </form>
@@ -2524,6 +2528,19 @@ export default function AdminPage() {
                 Confirm Rejection
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Global Admin Toast Notification ───────────────────────────── */}
+      {toastMessage && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 fade-in duration-300">
+          <div className="bg-forge-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-forge-gray-700">
+            <CheckCircle2 size={18} className="text-market-up shrink-0" />
+            <p className="text-sm font-bold">{toastMessage}</p>
+            <button onClick={() => setToast(null)} className="ml-2 text-forge-gray-400 hover:text-white">
+              <X size={16} />
+            </button>
           </div>
         </div>
       )}

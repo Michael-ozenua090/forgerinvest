@@ -117,8 +117,9 @@ export async function POST(req: NextRequest) {
   const supabaseAdmin = getAdminClient();
 
   try {
-    const payload = await req.json();
-    const { action } = payload;
+    const rawBody = await req.json();
+    const action = rawBody.action;
+    const payload = rawBody.payload ? { ...rawBody, ...rawBody.payload } : rawBody;
 
     switch (action) {
       case 'approve_deposit': {
@@ -248,15 +249,18 @@ export async function POST(req: NextRequest) {
       }
 
       case 'update_balance': {
-        const { userId, newBalanceUSD } = payload;
-        if (!userId || newBalanceUSD === undefined) {
-          return NextResponse.json({ error: 'Missing user ID or balance.' }, { status: 400 });
+        const userId = payload.userId;
+        const rawAmount = payload.amount !== undefined ? payload.amount : payload.newBalanceUSD;
+        if (!userId || rawAmount === undefined || isNaN(Number(rawAmount))) {
+          return NextResponse.json({ error: 'Missing user ID or balance amount.' }, { status: 400 });
         }
+
+        const targetAmount = Number(rawAmount);
 
         await supabaseAdmin
           .from('profiles')
           .update({ 
-            base_balance_usd: Number(newBalanceUSD),
+            base_balance_usd: targetAmount,
             updated_at: new Date().toISOString(),
           })
           .eq('id', userId);
@@ -267,14 +271,14 @@ export async function POST(req: NextRequest) {
             .insert({
               user_id: userId,
               type: 'DEPOSIT',
-              description: 'Administrative Treasury Credit',
-              amount: Number(newBalanceUSD),
+              description: 'Treasury Balance Adjustment',
+              amount: targetAmount,
               currency: 'USD',
               status: 'COMPLETED',
             });
         } catch {}
 
-        return NextResponse.json({ success: true, message: 'Balance updated.' });
+        return NextResponse.json({ success: true, message: 'Balance updated successfully.' });
       }
 
       case 'toggle_suspend': {
