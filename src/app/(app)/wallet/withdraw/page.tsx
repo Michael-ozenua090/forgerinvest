@@ -107,9 +107,9 @@ export default function WithdrawPage() {
     setStep(2);
   };
 
-  const handleWithdraw = () => {
+  const handleWithdraw = async () => {
     if (!selectedWallet) return;
-    const result = withdrawFunds(
+    const result = await withdrawFunds(
       withdrawCurrency, 
       parseFloat(withdrawAmount), 
       selectedWallet.address
@@ -134,27 +134,7 @@ export default function WithdrawPage() {
       return;
     }
 
-    const created = addLinkedWallet(modalCurrency, newWalletLabel.trim(), newWalletAddress.trim());
-
-    try {
-      const supabase = createClient();
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) {
-        await supabase
-          .from("linked_wallets")
-          .insert({
-            id: created.id,
-            user_id: authUser.id,
-            currency: modalCurrency,
-            label: newWalletLabel.trim(),
-            address: newWalletAddress.trim(),
-            is_default: created.isDefault,
-            created_at: created.createdAt,
-          });
-      }
-    } catch (err) {
-      console.error("Failed to sync linked wallet to Supabase:", err);
-    }
+    const created = await addLinkedWallet(modalCurrency, newWalletLabel.trim(), newWalletAddress.trim());
 
     setSelectedWalletId(created.id);
     setNewWalletLabel("");

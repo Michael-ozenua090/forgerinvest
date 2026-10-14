@@ -61,27 +61,7 @@ export default function WalletPage() {
       return;
     }
 
-    const created = addLinkedWallet(newCurrency, newLabel.trim(), newAddress.trim());
-
-    try {
-      const supabase = createClient();
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) {
-        await supabase
-          .from("linked_wallets")
-          .insert({
-            id: created.id,
-            user_id: authUser.id,
-            currency: newCurrency,
-            label: newLabel.trim(),
-            address: newAddress.trim(),
-            is_default: created.isDefault,
-            created_at: created.createdAt,
-          });
-      }
-    } catch (err) {
-      console.error("Failed to sync linked wallet to Supabase:", err);
-    }
+    const created = await addLinkedWallet(newCurrency, newLabel.trim(), newAddress.trim());
 
     setNewLabel("");
     setNewAddress("");
@@ -90,16 +70,7 @@ export default function WalletPage() {
   };
 
   const handleRemoveWallet = async (walletId: string) => {
-    removeLinkedWallet(walletId);
-    try {
-      const supabase = createClient();
-      await supabase
-        .from("linked_wallets")
-        .delete()
-        .eq("id", walletId);
-    } catch (err) {
-      console.error("Failed to delete linked wallet from Supabase:", err);
-    }
+    await removeLinkedWallet(walletId);
   };
 
   return (

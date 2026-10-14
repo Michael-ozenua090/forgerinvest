@@ -50,13 +50,13 @@ export default function PortfolioPage() {
     return p.status === filter;
   });
 
-  const handleWithdrawMatured = (planId: string) => {
+  const handleWithdrawMatured = async (planId: string) => {
     if (!isKycCompleted) {
       setShowKycGate(true);
       return;
     }
 
-    const res = withdrawPlan(planId);
+    const res = await withdrawPlan(planId);
     if (res.requiresKyc) {
       setShowKycGate(true);
     }

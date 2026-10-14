@@ -251,7 +251,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-forge-gray-900 group-hover:text-forge-orange transition-colors">Start Growth Plan</h4>
-                  <p className="text-xs font-medium text-forge-gray-600 mt-1">Lock capital from 1 to 12 months for up to +162% returns.</p>
+                  <p className="text-xs font-medium text-forge-gray-600 mt-1">Lock capital from 1 to 12 months for up to +1200% returns.</p>
                 </div>
               </Link>
 

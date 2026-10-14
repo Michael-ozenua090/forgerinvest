@@ -1732,7 +1732,7 @@ export default function AdminPage() {
                   {[
                     "Platform maintenance scheduled for tonight at 23:00 UTC. System services will remain uninterrupted.",
                     "Your withdrawal window has opened. Funds and interest yields are ready for release.",
-                    "New High-Yield Fixed Growth Plan launched: Lock capital for 12 months with +162% guaranteed return.",
+                    "New High-Yield Fixed Growth Plan launched: Lock capital for 12 months with +1200% guaranteed return.",
                     "Your identity documents have been processed. Identity verification has been approved.",
                     "Compliance reminder: Please link your designated payout address before requesting disbursements.",
                   ].map((preset, idx) => (

@@ -7,7 +7,7 @@ export default function InsightsPage() {
       category: "Yield Strategy",
       icon: <TrendingUp className="w-6 h-6 text-forge-orange" />,
       bg: "bg-forge-orange/10",
-      description: "How disciplined time-locks generate up to +162% returns through algorithmic liquidity allocation."
+      description: "How disciplined time-locks generate up to +1200% returns through algorithmic liquidity allocation."
     },
     {
       title: "Multi-Asset Wealth: Balancing Fiat and Digital Currencies",

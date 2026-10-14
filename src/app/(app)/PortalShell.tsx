@@ -21,7 +21,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ROUTES } from "@/lib/routes";
-import { useStore } from "@/lib/store";
+import { useStore, SavingsPlan, Transaction, LinkedWallet, Notification, computeBalances } from "@/lib/store";
+import { CurrencyType, PlanDurationMonths } from "@/lib/format";
 import { CurrencySelector } from "@/components/CurrencySelector";
 import { CryptoDepositModal } from "@/components/CryptoDepositModal";
 import { useHydration } from "@/lib/useHydration";
@@ -85,7 +86,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
           setIsAuthVerified(true);
         }
 
-        // Query canonical profile from Supabase
+        // 1. Query canonical profile from Supabase
         const { data: profile } = await supabase
           .from('profiles')
           .select('*')
@@ -105,75 +106,74 @@ export default function PortalShell({ children }: { children: React.ReactNode })
         const resolvedRole = profile?.role || 'user';
         const resolvedStatus = profile?.status || 'active';
 
-        if (isMounted) {
-          setCurrentUser({
-            id: authUser.id,
-            name: resolvedName,
-            email: resolvedEmail,
-            avatar: resolvedAvatar,
-            baseBalanceUSD: resolvedBalance,
-            kycStatus: resolvedKyc,
-            role: resolvedRole,
-            status: resolvedStatus,
-          });
-        }
-
-        // Query user's linked wallets
+        // 2. Query user's linked wallets
+        let mappedWallets: LinkedWallet[] = [];
         try {
           const { data: dbWallets } = await supabase
             .from('linked_wallets')
             .select('*')
-            .eq('user_id', authUser.id);
+            .eq('user_id', authUser.id)
+            .order('created_at', { ascending: true });
 
-          if (dbWallets && isMounted) {
-            setLinkedWallets(dbWallets.map((w: any) => ({
+          if (dbWallets) {
+            mappedWallets = dbWallets.map((w: any) => ({
               id: w.id,
               currency: w.currency,
               label: w.label,
               address: w.address,
               isDefault: w.is_default ?? w.isDefault,
               createdAt: w.created_at || new Date().toISOString(),
-            })));
+            }));
           }
         } catch {
           // Graceful fallback if linked_wallets table not migrated
         }
 
-        // Query user's savings plans
+        // 3. Query user's savings plans
+        let mappedPlans: SavingsPlan[] = [];
         try {
           const { data: dbPlans } = await supabase
             .from('savings_plans')
             .select('*')
-            .eq('user_id', authUser.id);
+            .eq('user_id', authUser.id)
+            .order('start_date', { ascending: false });
 
-          if (dbPlans && isMounted) {
-            setSavingsPlans(dbPlans.map((p: any) => ({
-              id: p.id,
-              capital: Number(p.capital || 0),
-              currency: p.currency || 'USD',
-              durationMonths: p.duration_months || p.durationMonths || 1,
-              interestRatePercent: p.interest_rate_percent || p.interestRatePercent || 6,
-              projectedProfit: Number(p.projected_profit || p.projectedProfit || 0),
-              totalPayout: Number(p.total_payout || p.totalPayout || 0),
-              startDate: p.start_date || p.startDate,
-              maturityDate: p.maturity_date || p.maturityDate,
-              isMatured: p.is_matured ?? p.isMatured ?? false,
-              status: p.status,
-            })));
+          if (dbPlans) {
+            mappedPlans = dbPlans.map((p: any) => {
+              const cap = Number(p.capital_usd ?? p.capital ?? 0);
+              const profit = Number(p.projected_profit_usd ?? p.projected_profit ?? 0);
+              const payout = Number(p.total_payout_usd ?? p.total_payout ?? (cap + profit));
+              const isMatured = p.is_matured ?? (new Date() >= new Date(p.maturity_date || p.maturityDate));
+              return {
+                id: p.id,
+                capital: cap,
+                currency: p.currency || 'USD',
+                durationMonths: (p.duration_months || p.durationMonths || 1) as PlanDurationMonths,
+                interestRatePercent: Number(p.interest_rate_percent || p.interestRatePercent || 100),
+                projectedProfit: profit,
+                totalPayout: payout,
+                startDate: p.start_date || p.startDate,
+                maturityDate: p.maturity_date || p.maturityDate,
+                isMatured,
+                status: p.status || (isMatured ? 'MATURED' : 'ACTIVE'),
+              };
+            });
           }
         } catch {
           // Graceful fallback if savings_plans table not migrated
         }
 
-        // Query user's transactions
+        // 4. Query user's transactions
+        let mappedTxs: Transaction[] = [];
         try {
           const { data: dbTxs } = await supabase
             .from('transactions')
             .select('*')
-            .eq('user_id', authUser.id);
+            .eq('user_id', authUser.id)
+            .order('created_at', { ascending: false });
 
-          if (dbTxs && isMounted) {
-            setTransactions(dbTxs.map((t: any) => ({
+          if (dbTxs) {
+            mappedTxs = dbTxs.map((t: any) => ({
               id: t.id,
               date: t.date || t.created_at,
               type: t.type,
@@ -186,29 +186,63 @@ export default function PortalShell({ children }: { children: React.ReactNode })
               proofImage: t.proof_image || t.proofImage,
               rejectionReason: t.rejection_reason || t.rejectionReason,
               userId: t.user_id || t.userId,
-            })));
+            }));
           }
         } catch {
           // Graceful fallback if transactions table not migrated
         }
 
-        // Query user's notifications
+        // 5. Query user's notifications
+        let mappedNotifs: Notification[] = [];
         try {
           const { data: dbNotifs } = await supabase
             .from('notifications')
             .select('*')
-            .eq('user_id', authUser.id);
+            .eq('user_id', authUser.id)
+            .order('created_at', { ascending: false });
 
-          if (dbNotifs && isMounted) {
-            setNotifications(dbNotifs.map((n: any) => ({
+          if (dbNotifs) {
+            mappedNotifs = dbNotifs.map((n: any) => ({
               id: n.id,
               message: n.message,
               timestamp: n.timestamp || n.created_at,
               read: n.read ?? false,
-            })));
+            }));
           }
         } catch {
           // Graceful fallback if notifications table not migrated
+        }
+
+        // Atomically map all canonical data into Zustand store state
+        if (isMounted) {
+          useStore.setState((state) => ({
+            baseBalanceUSD: resolvedBalance,
+            cryptoBalances: computeBalances(resolvedBalance, state.liveRates),
+            savingsPlans: mappedPlans,
+            linkedWallets: mappedWallets,
+            transactions: mappedTxs,
+            notifications: mappedNotifs,
+            currentUser: {
+              ...state.currentUser,
+              id: authUser.id,
+              name: resolvedName,
+              email: resolvedEmail,
+              avatar: resolvedAvatar,
+              baseBalanceUSD: resolvedBalance,
+              kycStatus: resolvedKyc,
+              role: resolvedRole,
+              status: resolvedStatus,
+              linkedWallets: mappedWallets,
+            },
+            user: {
+              name: resolvedName,
+              email: resolvedEmail,
+              avatar: resolvedAvatar,
+              isVerified: resolvedKyc === 'verified',
+              kycStatus: resolvedKyc,
+            },
+            isKycCompleted: resolvedKyc === 'verified',
+          }));
         }
       } catch (err) {
         console.error('Session verification error:', err);
@@ -217,34 +251,35 @@ export default function PortalShell({ children }: { children: React.ReactNode })
 
     verifySessionAndSync();
 
+    const supabase = createClient();
+    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user && isMounted) {
+        verifySessionAndSync();
+      }
+    });
+
     return () => {
       isMounted = false;
+      authSub?.unsubscribe();
     };
-  }, [router, setCurrentUser, setLinkedWallets, setSavingsPlans, setTransactions, setNotifications]);
+  }, [router]);
 
-  // Realtime Live Balance and KYC Status Synchronization
+  // Realtime Live Balance, Plans, and KYC Status Synchronization across Devices
   useEffect(() => {
     if (!currentUser?.id) return;
     const supabase = createClient();
 
     const channel = supabase
-      .channel(`profile-${currentUser.id}`)
+      .channel(`sync-user-${currentUser.id}`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${currentUser.id}` },
+        { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${currentUser.id}` },
         (payload: any) => {
           if (payload.new?.base_balance_usd !== undefined) {
-            // Update store balance live on user's screen
             const newBal = Number(payload.new.base_balance_usd);
             useStore.setState((state) => ({
               baseBalanceUSD: newBal,
-              cryptoBalances: {
-                USD: newBal,
-                GBP: newBal * (state.liveRates.GBP || 0.79),
-                BTC: newBal / (state.liveRates.BTC || 85000),
-                ETH: newBal / (state.liveRates.ETH || 2600),
-                SOL: newBal / (state.liveRates.SOL || 180),
-              },
+              cryptoBalances: computeBalances(newBal, state.liveRates),
               currentUser: state.currentUser ? { ...state.currentUser, baseBalanceUSD: newBal } : state.currentUser,
             }));
           }
@@ -255,6 +290,69 @@ export default function PortalShell({ children }: { children: React.ReactNode })
               currentUser: state.currentUser ? { ...state.currentUser, kycStatus: payload.new.kyc_status } : state.currentUser,
               user: { ...state.user, kycStatus: payload.new.kyc_status, isVerified },
             }));
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'savings_plans', filter: `user_id=eq.${currentUser.id}` },
+        async () => {
+          const { data: dbPlans } = await supabase
+            .from('savings_plans')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .order('start_date', { ascending: false });
+
+          if (dbPlans) {
+            const mapped = dbPlans.map((p: any) => {
+              const cap = Number(p.capital_usd ?? p.capital ?? 0);
+              const profit = Number(p.projected_profit_usd ?? p.projected_profit ?? 0);
+              const payout = Number(p.total_payout_usd ?? p.total_payout ?? (cap + profit));
+              const isMatured = p.is_matured ?? (new Date() >= new Date(p.maturity_date || p.maturityDate));
+              return {
+                id: p.id,
+                capital: cap,
+                currency: p.currency || 'USD',
+                durationMonths: (p.duration_months || p.durationMonths || 1) as PlanDurationMonths,
+                interestRatePercent: Number(p.interest_rate_percent || p.interestRatePercent || 100),
+                projectedProfit: profit,
+                totalPayout: payout,
+                startDate: p.start_date || p.startDate,
+                maturityDate: p.maturity_date || p.maturityDate,
+                isMatured,
+                status: p.status || (isMatured ? 'MATURED' : 'ACTIVE'),
+              };
+            });
+            useStore.setState({ savingsPlans: mapped });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${currentUser.id}` },
+        async () => {
+          const { data: dbTxs } = await supabase
+            .from('transactions')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .order('created_at', { ascending: false });
+
+          if (dbTxs) {
+            const mapped = dbTxs.map((t: any) => ({
+              id: t.id,
+              date: t.date || t.created_at,
+              type: t.type,
+              description: t.description || '',
+              amount: Number(t.amount || 0),
+              currency: t.currency || 'USD',
+              status: t.status,
+              txHash: t.tx_hash || t.txHash,
+              destinationAddress: t.destination_address || t.destinationAddress,
+              proofImage: t.proof_image || t.proofImage,
+              rejectionReason: t.rejection_reason || t.rejectionReason,
+              userId: t.user_id || t.userId,
+            }));
+            useStore.setState({ transactions: mapped });
           }
         }
       )
@@ -300,11 +398,11 @@ export default function PortalShell({ children }: { children: React.ReactNode })
   }, []);
 
   const searchResults = [
-    { name: "1-Month Fixed Plan (+6%)", type: "Plan", href: "/plans?duration=1" },
-    { name: "2-Month Accelerated Plan (+15%)", type: "Plan", href: "/plans?duration=2" },
-    { name: "3-Month Compounding Plan (+27%)", type: "Plan", href: "/plans?duration=3" },
-    { name: "6-Month Strategic Plan (+66%)", type: "Plan", href: "/plans?duration=6" },
-    { name: "12-Month High-Yield Plan (+162%)", type: "Plan", href: "/plans?duration=12" },
+    { name: "1-Month Fixed Plan (+100%)", type: "Plan", href: "/plans?duration=1" },
+    { name: "2-Month Accelerated Plan (+200%)", type: "Plan", href: "/plans?duration=2" },
+    { name: "3-Month Compounding Plan (+300%)", type: "Plan", href: "/plans?duration=3" },
+    { name: "6-Month Strategic Plan (+600%)", type: "Plan", href: "/plans?duration=6" },
+    { name: "12-Month High-Yield Plan (+1200%)", type: "Plan", href: "/plans?duration=12" },
     { name: "Active Growth Portfolio", type: "Portfolio", href: "/portfolio" },
     { name: "Deposit Capital", type: "Wallet", href: "/wallet" },
     { name: "Withdraw Funds", type: "Wallet", href: "/wallet/withdraw" },

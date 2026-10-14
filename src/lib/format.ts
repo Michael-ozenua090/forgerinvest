@@ -6,11 +6,11 @@ export const PLAN_CONFIG: Record<
   PlanDurationMonths,
   { months: PlanDurationMonths; label: string; ratePercent: number; multiplier: number }
 > = {
-  1: { months: 1, label: "1 Month", ratePercent: 6, multiplier: 1.06 },
-  2: { months: 2, label: "2 Months", ratePercent: 15, multiplier: 1.15 },
-  3: { months: 3, label: "3 Months", ratePercent: 27, multiplier: 1.27 },
-  6: { months: 6, label: "6 Months", ratePercent: 66, multiplier: 1.66 },
-  12: { months: 12, label: "12 Months", ratePercent: 162, multiplier: 2.62 },
+  1: { months: 1, label: "1 Month", ratePercent: 100, multiplier: 2.0 },
+  2: { months: 2, label: "2 Months", ratePercent: 200, multiplier: 3.0 },
+  3: { months: 3, label: "3 Months", ratePercent: 300, multiplier: 4.0 },
+  6: { months: 6, label: "6 Months", ratePercent: 600, multiplier: 7.0 },
+  12: { months: 12, label: "12 Months", ratePercent: 1200, multiplier: 13.0 },
 };
 
 export const DEFAULT_RATES: Record<CurrencyType, number> = {

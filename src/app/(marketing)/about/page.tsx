@@ -36,7 +36,7 @@ export default function AboutPage() {
                 <Landmark size={20} />
               </div>
               <h3 className="font-bold text-forge-gray-900 mb-2">Guaranteed Compounding</h3>
-              <p className="text-sm font-medium text-forge-gray-600">Fixed contracted yields from +6% to +162% with automated maturity payouts.</p>
+              <p className="text-sm font-medium text-forge-gray-600">Fixed contracted yields from +100% to +1200% with automated maturity payouts.</p>
             </div>
             <div className="clean-card p-6">
               <div className="w-10 h-10 rounded-xl bg-forge-orange-wash flex items-center justify-center text-forge-orange mb-4">

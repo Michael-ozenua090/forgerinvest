@@ -79,47 +79,10 @@ export default function PlansPage() {
       setShowInsufficientModal(true);
       return;
     }
-    const success = createPlan(capitalInActiveCurrency, activeCurrency, selectedDuration);
+    const success = await createPlan(capitalInActiveCurrency, activeCurrency, selectedDuration);
     if (success) {
       setIsSuccess(true);
       setTimeout(() => setIsSuccess(false), 5000);
-
-      try {
-        const supabase = createClient();
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser) {
-          const config = PLAN_CONFIG[selectedDuration];
-          const projectedProfitUsd = (capitalUsd * config.ratePercent) / 100;
-          const totalPayoutUsd = capitalUsd + projectedProfitUsd;
-          const now = new Date();
-          const maturity = new Date(now);
-          maturity.setMonth(maturity.getMonth() + config.months);
-
-          await supabase
-            .from("savings_plans")
-            .insert({
-              user_id: authUser.id,
-              capital: capitalUsd,
-              currency: activeCurrency,
-              duration_months: config.months,
-              interest_rate_percent: config.ratePercent,
-              projected_profit: projectedProfitUsd,
-              total_payout: totalPayoutUsd,
-              start_date: now.toISOString(),
-              maturity_date: maturity.toISOString(),
-              is_matured: false,
-              status: "ACTIVE",
-            });
-
-          const newBal = useStore.getState().baseBalanceUSD || 0;
-          await supabase
-            .from("profiles")
-            .update({ base_balance_usd: newBal })
-            .eq("id", authUser.id);
-        }
-      } catch (err) {
-        console.error("Failed to sync created plan to Supabase:", err);
-      }
     }
   };
 
@@ -355,20 +318,20 @@ export default function PlansPage() {
             <thead>
               <tr className="border-b border-forge-gray-200 text-xs font-bold uppercase tracking-wider text-forge-gray-500 bg-forge-gray-50/50">
                 <th className="py-4 px-4">Starting Capital</th>
-                <th className="py-4 px-4">1 Month (+6%)</th>
-                <th className="py-4 px-4">2 Months (+15%)</th>
-                <th className="py-4 px-4">3 Months (+27%)</th>
-                <th className="py-4 px-4">6 Months (+66%)</th>
-                <th className="py-4 px-4">12 Months (+162%)</th>
+                <th className="py-4 px-4">1 Month (+100%)</th>
+                <th className="py-4 px-4">2 Months (+200%)</th>
+                <th className="py-4 px-4">3 Months (+300%)</th>
+                <th className="py-4 px-4">6 Months (+600%)</th>
+                <th className="py-4 px-4">12 Months (+1200%)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-forge-gray-100 font-medium">
               {[
-                { start: 50, m1: 53.00, p1: 3, m2: 57.50, p2: 7.50, m3: 63.50, p3: 13.50, m6: 83.00, p6: 33, m12: 131.00, p12: 81 },
-                { start: 100, m1: 106.00, p1: 6, m2: 115.00, p2: 15, m3: 127.00, p3: 27, m6: 166.00, p6: 66, m12: 262.00, p12: 162 },
-                { start: 250, m1: 265.00, p1: 15, m2: 287.50, p2: 37.50, m3: 317.50, p3: 67.50, m6: 415.00, p6: 165, m12: 655.00, p12: 405 },
-                { start: 500, m1: 530.00, p1: 30, m2: 575.00, p2: 75, m3: 635.00, p3: 135, m6: 830.00, p6: 330, m12: 1310.00, p12: 810 },
-                { start: 1000, m1: 1060.00, p1: 60, m2: 1150.00, p2: 150, m3: 1270.00, p3: 270, m6: 1660.00, p6: 660, m12: 2620.00, p12: 1620 },
+                { start: 50, m1: 100, p1: 50, m2: 150, p2: 100, m3: 200, p3: 150, m6: 350, p6: 300, m12: 650, p12: 600 },
+                { start: 100, m1: 200, p1: 100, m2: 300, p2: 200, m3: 400, p3: 300, m6: 700, p6: 600, m12: 1300, p12: 1200 },
+                { start: 250, m1: 500, p1: 250, m2: 750, p2: 500, m3: 1000, p3: 750, m6: 1750, p6: 1500, m12: 3250, p12: 3000 },
+                { start: 500, m1: 1000, p1: 500, m2: 1500, p2: 1000, m3: 2000, p3: 1500, m6: 3500, p6: 3000, m12: 6500, p12: 6000 },
+                { start: 1000, m1: 2000, p1: 1000, m2: 3000, p2: 2000, m3: 4000, p3: 3000, m6: 7000, p6: 6000, m12: 13000, p12: 12000 },
               ].map((row) => (
                 <tr key={row.start} className="hover:bg-forge-gray-50/50 transition-colors">
                   <td className="py-4 px-4 font-bold text-forge-gray-900 tabular-nums">

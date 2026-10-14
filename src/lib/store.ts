@@ -9,6 +9,7 @@ import {
   convertFiatToCrypto,
   formatCrypto 
 } from './format';
+import { createClient } from './supabase/client';
 
 export type { CurrencyType, PlanDurationMonths };
 
@@ -121,15 +122,15 @@ export interface AppState {
     amount: number,
     currency: CurrencyType,
     duration: PlanDurationMonths
-  ) => boolean;
-  withdrawPlan: (planId: string) => { success: boolean; requiresKyc?: boolean; error?: string };
+  ) => Promise<boolean>;
+  withdrawPlan: (planId: string) => Promise<{ success: boolean; requiresKyc?: boolean; error?: string }>;
   depositFunds: (currency: CurrencyType, amount: number) => void;
   submitDepositProof: (
     currency: CurrencyType,
     amount: number,
     txHash: string,
     proofImage: string
-  ) => void;
+  ) => Promise<void>;
   approveDeposit: (txId: string) => void;
   rejectDeposit: (txId: string, reason?: string) => void;
   updateUserBalance: (currency: CurrencyType, newBalance: number) => void;
@@ -137,7 +138,7 @@ export interface AppState {
     currency: CurrencyType,
     amount: number,
     destinationAddress?: string
-  ) => { success: boolean; requiresKyc?: boolean; error?: string };
+  ) => Promise<{ success: boolean; requiresKyc?: boolean; error?: string }>;
   completeKYC: (data?: any) => void;
   setToast: (msg: string | null) => void;
   markNotificationsAsRead: () => void;
@@ -149,8 +150,8 @@ export interface AppState {
   adminPushNotification: (recipientId: 'ALL' | string, message: string) => void;
 
   // Destination Wallet Linking Actions
-  addLinkedWallet: (currency: CurrencyType, label: string, address: string) => LinkedWallet;
-  removeLinkedWallet: (walletId: string) => void;
+  addLinkedWallet: (currency: CurrencyType, label: string, address: string) => Promise<LinkedWallet>;
+  removeLinkedWallet: (walletId: string) => Promise<void>;
 
   // Admin User Management Actions
   adminUpdateUser: (userId: string, data: Partial<UserAccount>) => void;
@@ -173,7 +174,7 @@ export interface AppState {
   resetSession: () => void;
 }
 
-const computeBalances = (baseUSD: number, rates: Record<CurrencyType, number>): Record<CurrencyType, number> => ({
+export const computeBalances = (baseUSD: number, rates: Record<CurrencyType, number>): Record<CurrencyType, number> => ({
   USD: baseUSD,
   GBP: convertFiatToCrypto(baseUSD, 'GBP', rates),
   BTC: convertFiatToCrypto(baseUSD, 'BTC', rates),
@@ -277,88 +278,147 @@ export const useStore = create<AppState>()(
         set({ activeCurrency: currency });
       },
 
-      createPlan: (amount, currency, duration) => {
+      createPlan: async (amount, currency, duration) => {
         const state = get();
-        const config = PLAN_CONFIG[duration];
-        if (!config) return false;
-
-        // Convert the staked amount in chosen currency into base USD capital
-        const capitalUsd = convertCryptoToFiat(amount, currency, state.liveRates);
-
-        // Check against unified single balance (stored in base USD)
-        if (state.baseBalanceUSD < capitalUsd) {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          set({ toastMessage: "Please sign in to activate a growth plan." });
           return false;
         }
 
-        const projectedProfitUsd = capitalUsd * (config.ratePercent / 100);
-        const totalPayoutUsd = capitalUsd + projectedProfitUsd;
+        const capitalUsd = convertCryptoToFiat(amount, currency, state.liveRates);
+        if (capitalUsd < 50) {
+          set({ toastMessage: "Minimum capital requirement is $50.00 USD." });
+          return false;
+        }
+
+        if (state.baseBalanceUSD < capitalUsd) {
+          set({ toastMessage: "Insufficient balance." });
+          return false;
+        }
+
+        const config = PLAN_CONFIG[duration] || PLAN_CONFIG[1];
+        const profitUsd = capitalUsd * (config.ratePercent / 100);
+        const payoutUsd = capitalUsd + profitUsd;
+        const newBalanceUsd = state.baseBalanceUSD - capitalUsd;
 
         const now = new Date();
         const maturity = new Date();
         maturity.setMonth(maturity.getMonth() + duration);
 
+        // 1. Deduct balance in Supabase profiles table
+        const { error: balanceErr } = await supabase
+          .from('profiles')
+          .update({ base_balance_usd: newBalanceUsd, updated_at: now.toISOString() })
+          .eq('id', user.id);
+
+        if (balanceErr) {
+          set({ toastMessage: `Failed to update balance: ${balanceErr.message}` });
+          return false;
+        }
+
+        // 2. Insert plan into Supabase savings_plans table
+        const { data: insertedPlan, error: planErr } = await supabase
+          .from('savings_plans')
+          .insert({
+            user_id: user.id,
+            capital_usd: capitalUsd,
+            currency,
+            duration_months: duration,
+            interest_rate_percent: config.ratePercent,
+            projected_profit_usd: profitUsd,
+            total_payout_usd: payoutUsd,
+            start_date: now.toISOString(),
+            maturity_date: maturity.toISOString(),
+            status: 'ACTIVE',
+          })
+          .select()
+          .single();
+
+        if (planErr || !insertedPlan) {
+          set({ toastMessage: `Failed to save plan: ${planErr?.message}` });
+          return false;
+        }
+
+        // 3. Insert transaction into Supabase transactions table
+        const desc = `${config.label} Fixed Growth Plan ($${capitalUsd.toFixed(2)} USD @ +${config.ratePercent}%)`;
+        const { data: insertedTx } = await supabase
+          .from('transactions')
+          .insert({
+            user_id: user.id,
+            type: 'PLAN_STAKE',
+            description: desc,
+            amount: -amount,
+            currency,
+            status: 'COMPLETED',
+          })
+          .select()
+          .single();
+
+        // 4. Insert notification into Supabase
+        try {
+          await supabase.from('notifications').insert({
+            user_id: user.id,
+            title: 'Growth Plan Activated',
+            message: `Locked $${capitalUsd.toFixed(2)} USD for ${config.label} (+${config.ratePercent}% return).`,
+            type: 'SUCCESS',
+          });
+        } catch {}
+
+        // 5. Update local store state
         const newPlan: SavingsPlan = {
-          id: "plan-" + Math.random().toString(36).substring(2, 9),
-          capital: capitalUsd,
-          currency,
-          durationMonths: duration,
-          interestRatePercent: config.ratePercent,
-          projectedProfit: projectedProfitUsd,
-          totalPayout: totalPayoutUsd,
-          startDate: now.toISOString(),
-          maturityDate: maturity.toISOString(),
+          id: insertedPlan.id,
+          capital: Number(insertedPlan.capital_usd ?? insertedPlan.capital ?? capitalUsd),
+          currency: (insertedPlan.currency || currency) as CurrencyType,
+          durationMonths: (insertedPlan.duration_months || duration) as PlanDurationMonths,
+          interestRatePercent: Number(insertedPlan.interest_rate_percent || config.ratePercent),
+          projectedProfit: Number(insertedPlan.projected_profit_usd ?? insertedPlan.projected_profit ?? profitUsd),
+          totalPayout: Number(insertedPlan.total_payout_usd ?? insertedPlan.total_payout ?? payoutUsd),
+          startDate: insertedPlan.start_date || now.toISOString(),
+          maturityDate: insertedPlan.maturity_date || maturity.toISOString(),
           isMatured: false,
           status: 'ACTIVE',
         };
 
-        const newTx: Transaction = {
-          id: "tx-" + Math.random().toString(36).substring(2, 9),
-          date: now.toISOString(),
-          type: "PLAN_STAKE",
-          description: `${config.label} Fixed Growth Plan (${formatCrypto(amount, currency)} @ +${config.ratePercent}%)`,
-          amount: -amount,
-          currency,
-          status: "COMPLETED",
-          userId: state.currentUser.id,
-        };
-
-        const newNotification: Notification = {
-          id: "notif-" + Math.random().toString(36).substring(2, 9),
-          message: `Active Plan Started: ${formatCrypto(amount, currency)} locked for ${config.label} (+${config.ratePercent}% return).`,
-          timestamp: now.toISOString(),
-          read: false,
-        };
-
-        const newBaseUSD = state.baseBalanceUSD - capitalUsd;
         const updatedCurrent: UserAccount = {
           ...state.currentUser,
-          baseBalanceUSD: newBaseUSD,
+          baseBalanceUSD: newBalanceUsd,
         };
         const updatedUsers = state.users.map((u) =>
           u.id === state.currentUser.id ? updatedCurrent : u
         );
 
         set({
-          baseBalanceUSD: newBaseUSD,
-          cryptoBalances: computeBalances(newBaseUSD, state.liveRates),
+          baseBalanceUSD: newBalanceUsd,
+          cryptoBalances: computeBalances(newBalanceUsd, state.liveRates),
           currentUser: updatedCurrent,
           users: updatedUsers,
           savingsPlans: [newPlan, ...state.savingsPlans],
-          transactions: [newTx, ...state.transactions],
-          notifications: [newNotification, ...state.notifications],
+          transactions: insertedTx ? [{
+            id: insertedTx.id,
+            date: insertedTx.created_at || now.toISOString(),
+            type: 'PLAN_STAKE',
+            description: insertedTx.description || desc,
+            amount: Number(insertedTx.amount),
+            currency: (insertedTx.currency || currency) as CurrencyType,
+            status: 'COMPLETED',
+          }, ...state.transactions] : state.transactions,
           toastMessage: `Successfully activated ${config.label} Growth Plan!`,
         });
 
         return true;
       },
 
-      withdrawPlan: (planId) => {
+      withdrawPlan: async (planId) => {
         const state = get();
         const plan = state.savingsPlans.find((p) => p.id === planId);
 
         if (!plan) return { success: false, error: "Plan not found." };
-        if (plan.status !== 'MATURED') {
-          return { success: false, error: "Plan has not matured yet." };
+        if (plan.status !== 'MATURED' && !plan.isMatured) {
+          if (new Date() < new Date(plan.maturityDate)) {
+            return { success: false, error: "Plan has not matured yet." };
+          }
         }
 
         // INTENTIONAL KYC WITHDRAWAL GATE
@@ -377,22 +437,63 @@ export const useStore = create<AppState>()(
           state.liveRates
         );
 
+        const newBaseUSD = state.baseBalanceUSD + plan.totalPayout;
+        const now = new Date().toISOString();
+
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          // 1. Update savings_plans status to 'WITHDRAWN' in Supabase
+          await supabase
+            .from('savings_plans')
+            .update({ status: 'WITHDRAWN' })
+            .eq('id', planId);
+
+          // 2. Increment profile balance in Supabase
+          await supabase
+            .from('profiles')
+            .update({ base_balance_usd: newBaseUSD, updated_at: now })
+            .eq('id', user.id);
+
+          // 3. Insert transaction log
+          await supabase
+            .from('transactions')
+            .insert({
+              user_id: user.id,
+              type: 'PLAN_PAYOUT',
+              description: `Matured Plan Payout: ${plan.interestRatePercent}% Yield on $${plan.capital.toFixed(2)} USD Principal`,
+              amount: payoutCurrencyAmount,
+              currency: plan.currency,
+              status: 'COMPLETED',
+            });
+
+          // 4. Notification
+          try {
+            await supabase.from('notifications').insert({
+              user_id: user.id,
+              title: 'Matured Plan Disbursed',
+              message: `Successfully claimed ${formatCrypto(payoutCurrencyAmount, plan.currency)} payout from your ${plan.durationMonths}-Month plan!`,
+              type: 'SUCCESS',
+            });
+          } catch {}
+        }
+
         const newTx: Transaction = {
           id: "tx-" + Math.random().toString(36).substring(2, 9),
-          date: new Date().toISOString(),
+          date: now,
           type: 'PLAN_PAYOUT',
-          description: `Matured Plan Payout: ${plan.interestRatePercent}% Yield on ${plan.capital.toFixed(2)} USD Principal`,
+          description: `Matured Plan Payout: ${plan.interestRatePercent}% Yield on $${plan.capital.toFixed(2)} USD Principal`,
           amount: payoutCurrencyAmount,
           currency: plan.currency,
           status: 'COMPLETED',
-          userId: state.currentUser.id,
+          userId: user?.id || state.currentUser.id,
         };
 
         const updatedPlans = state.savingsPlans.map((p) =>
-          p.id === planId ? { ...p, status: 'WITHDRAWN' as const } : p
+          p.id === planId ? { ...p, status: 'WITHDRAWN' as const, isMatured: true } : p
         );
 
-        const newBaseUSD = state.baseBalanceUSD + plan.totalPayout;
         const updatedCurrent: UserAccount = {
           ...state.currentUser,
           baseBalanceUSD: newBaseUSD,
@@ -447,11 +548,46 @@ export const useStore = create<AppState>()(
         });
       },
 
-      submitDepositProof: (currency, amount, txHash, proofImage) => {
+      submitDepositProof: async (currency, amount, txHash, proofImage) => {
         const state = get();
         const now = new Date().toISOString();
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        let insertedId = "tx-" + Math.random().toString(36).substring(2, 9);
+
+        if (user) {
+          const { data: insertedTx } = await supabase
+            .from('transactions')
+            .insert({
+              user_id: user.id,
+              type: 'DEPOSIT',
+              description: `${currency} Capital Deposit (Proof Submitted)`,
+              amount,
+              currency,
+              status: 'PENDING',
+              tx_hash: txHash,
+              proof_image: proofImage,
+            })
+            .select()
+            .maybeSingle();
+
+          if (insertedTx?.id) {
+            insertedId = insertedTx.id;
+          }
+
+          try {
+            await supabase.from('notifications').insert({
+              user_id: user.id,
+              title: 'Deposit Proof Submitted',
+              message: `Deposit of ${amount} ${currency} submitted and pending admin verification.`,
+              type: 'INFO',
+            });
+          } catch {}
+        }
+
         const newTx: Transaction = {
-          id: "tx-" + Math.random().toString(36).substring(2, 9),
+          id: insertedId,
           date: now,
           type: 'DEPOSIT',
           description: `${currency} Capital Deposit (Proof Submitted)`,
@@ -460,7 +596,7 @@ export const useStore = create<AppState>()(
           status: 'PENDING',
           txHash,
           proofImage,
-          userId: state.currentUser.id,
+          userId: user?.id || state.currentUser.id,
         };
 
         const newNotification: Notification = {
@@ -567,7 +703,7 @@ export const useStore = create<AppState>()(
         });
       },
 
-      withdrawFunds: (currency, amount, destinationAddress) => {
+      withdrawFunds: async (currency, amount, destinationAddress) => {
         const state = get();
 
         // INTENTIONAL KYC WITHDRAWAL GATE
@@ -584,19 +720,66 @@ export const useStore = create<AppState>()(
           return { success: false, error: "Insufficient balance for withdrawal." };
         }
 
-        const newTx: Transaction = {
-          id: Math.random().toString(36).substring(2, 9),
-          date: new Date().toISOString(),
-          type: 'WITHDRAW',
-          description: `${currency} Withdrawal to ${destinationAddress ? destinationAddress.slice(0, 10) + '...' : 'External Account'}`,
-          amount: -amount,
-          currency,
-          status: 'COMPLETED',
-          destinationAddress,
-          userId: state.currentUser.id,
-        };
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
 
         const newBaseUSD = state.baseBalanceUSD - withdrawValueUSD;
+        const now = new Date().toISOString();
+        let insertedId = "tx-" + Math.random().toString(36).substring(2, 9);
+
+        if (user) {
+          // 1. Deduct balance in profiles table
+          const { error: balErr } = await supabase
+            .from('profiles')
+            .update({ base_balance_usd: newBaseUSD, updated_at: now })
+            .eq('id', user.id);
+
+          if (balErr) {
+            return { success: false, error: `Balance deduction failed: ${balErr.message}` };
+          }
+
+          // 2. Insert withdrawal transaction
+          const { data: insertedTx } = await supabase
+            .from('transactions')
+            .insert({
+              user_id: user.id,
+              type: 'WITHDRAW',
+              description: `${currency} Withdrawal to ${destinationAddress ? destinationAddress.slice(0, 10) + '...' : 'External Wallet'}`,
+              amount: -amount,
+              currency,
+              status: 'PENDING',
+              destination_address: destinationAddress,
+            })
+            .select()
+            .maybeSingle();
+
+          if (insertedTx?.id) {
+            insertedId = insertedTx.id;
+          }
+
+          // 3. Notification
+          try {
+            await supabase.from('notifications').insert({
+              user_id: user.id,
+              title: 'Withdrawal Requested',
+              message: `Requested withdrawal of ${formatCrypto(amount, currency)} to ${destinationAddress ? destinationAddress.slice(0, 10) + '...' : 'External Wallet'}`,
+              type: 'INFO',
+            });
+          } catch {}
+        }
+
+        const newTx: Transaction = {
+          id: insertedId,
+          date: now,
+          type: 'WITHDRAW',
+          description: `${currency} Withdrawal to ${destinationAddress ? destinationAddress.slice(0, 10) + '...' : 'External Wallet'}`,
+          amount: -amount,
+          currency,
+          status: 'PENDING',
+          destinationAddress,
+          userId: user?.id || state.currentUser.id,
+        };
+
         const updatedCurrent: UserAccount = {
           ...state.currentUser,
           baseBalanceUSD: newBaseUSD,
@@ -733,15 +916,44 @@ export const useStore = create<AppState>()(
       },
 
       // Destination Wallet Linking Actions
-      addLinkedWallet: (currency, label, address) => {
+      addLinkedWallet: async (currency, label, address) => {
         const state = get();
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        const isDefault = (state.currentUser.linkedWallets || []).filter((w) => w.currency === currency).length === 0;
+        let newWalletId = "w-" + Math.random().toString(36).substring(2, 9);
+        const now = new Date().toISOString();
+
+        if (user) {
+          try {
+            const { data: dbWallet } = await supabase
+              .from('linked_wallets')
+              .insert({
+                user_id: user.id,
+                currency,
+                label,
+                address,
+                is_default: isDefault,
+              })
+              .select()
+              .maybeSingle();
+
+            if (dbWallet?.id) {
+              newWalletId = dbWallet.id;
+            }
+          } catch (err) {
+            console.error("Failed to insert linked wallet to Supabase:", err);
+          }
+        }
+
         const newWallet: LinkedWallet = {
-          id: "w-" + Math.random().toString(36).substring(2, 9),
+          id: newWalletId,
           currency,
           label,
           address,
-          isDefault: (state.currentUser.linkedWallets || []).filter((w) => w.currency === currency).length === 0,
-          createdAt: new Date().toISOString(),
+          isDefault,
+          createdAt: now,
         };
 
         const updatedWallets = [...(state.currentUser.linkedWallets || []), newWallet];
@@ -759,8 +971,23 @@ export const useStore = create<AppState>()(
         return newWallet;
       },
 
-      removeLinkedWallet: (walletId) => {
+      removeLinkedWallet: async (walletId) => {
         const state = get();
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          try {
+            await supabase
+              .from('linked_wallets')
+              .delete()
+              .eq('id', walletId)
+              .eq('user_id', user.id);
+          } catch (err) {
+            console.error("Failed to delete linked wallet from Supabase:", err);
+          }
+        }
+
         const updatedWallets = (state.currentUser.linkedWallets || []).filter((w) => w.id !== walletId);
         const updatedCurrentUser: UserAccount = { ...state.currentUser, linkedWallets: updatedWallets };
         const updatedUsers = state.users.map((u) =>

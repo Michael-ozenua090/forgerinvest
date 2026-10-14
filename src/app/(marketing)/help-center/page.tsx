@@ -6,14 +6,14 @@ export default function HelpCenterPage() {
     {
       title: "Capital Growth & Savings Plans",
       faqs: [
-        { q: "What is a Fixed-Term Growth Plan?", a: "A structured capital accumulation contract that locks principal for a predetermined duration (1, 2, 3, 6, or 12 months) and delivers predictable contracted yields from +6% to +162% upon maturity." },
+        { q: "What is a Fixed-Term Growth Plan?", a: "A structured capital accumulation contract that locks principal for a predetermined duration (1, 2, 3, 6, or 12 months) and delivers predictable contracted yields from +100% to +1200% upon maturity." },
         { q: "What is the minimum starting capital?", a: "You can activate a growth plan with as little as $50.00 USD, or the equivalent in GBP, BTC, ETH, and SOL." }
       ]
     },
     {
       title: "Maturity & Returns",
       faqs: [
-        { q: "How are yields calculated?", a: "Yields are calculated strictly according to your selected commitment horizon: 1 Month (+6%), 2 Months (+15%), 3 Months (+27%), 6 Months (+66%), and 12 Months (+162%). Both principal and accrued profit disburse together at maturity." },
+        { q: "How are yields calculated?", a: "Yields are calculated strictly according to your selected commitment horizon: 1 Month (+100%), 2 Months (+200%), 3 Months (+300%), 6 Months (+600%), and 12 Months (+1200%). Both principal and accrued profit disburse together at maturity." },
         { q: "Can I withdraw before my plan matures?", a: "To ensure maximum algorithmic compound returns and principal protection, plans remain locked until the designated maturity date, after which funds become fully liquid." }
       ]
     },

@@ -30,11 +30,11 @@ import { ROUTES } from "@/lib/routes";
 const PRESET_AMOUNTS = [50, 100, 250, 500, 1000];
 
 const MATRIX_ROWS = [
-  { start: 50, m1: 53.00, p1: 3, m2: 57.50, p2: 7.50, m3: 63.50, p3: 13.50, m6: 83.00, p6: 33, m12: 131.00, p12: 81 },
-  { start: 100, m1: 106.00, p1: 6, m2: 115.00, p2: 15, m3: 127.00, p3: 27, m6: 166.00, p6: 66, m12: 262.00, p12: 162 },
-  { start: 250, m1: 265.00, p1: 15, m2: 287.50, p2: 37.50, m3: 317.50, p3: 67.50, m6: 415.00, p6: 165, m12: 655.00, p12: 405 },
-  { start: 500, m1: 530.00, p1: 30, m2: 575.00, p2: 75, m3: 635.00, p3: 135, m6: 830.00, p6: 330, m12: 1310.00, p12: 810 },
-  { start: 1000, m1: 1060.00, p1: 60, m2: 1150.00, p2: 150, m3: 1270.00, p3: 270, m6: 1660.00, p6: 660, m12: 2620.00, p12: 1620 },
+  { start: 50, m1: 100, p1: 50, m2: 150, p2: 100, m3: 200, p3: 150, m6: 350, p6: 300, m12: 650, p12: 600 },
+  { start: 100, m1: 200, p1: 100, m2: 300, p2: 200, m3: 400, p3: 300, m6: 700, p6: 600, m12: 1300, p12: 1200 },
+  { start: 250, m1: 500, p1: 250, m2: 750, p2: 500, m3: 1000, p3: 750, m6: 1750, p6: 1500, m12: 3250, p12: 3000 },
+  { start: 500, m1: 1000, p1: 500, m2: 1500, p2: 1000, m3: 2000, p3: 1500, m6: 3500, p6: 3000, m12: 6500, p12: 6000 },
+  { start: 1000, m1: 2000, p1: 1000, m2: 3000, p2: 2000, m3: 4000, p3: 3000, m6: 7000, p6: 6000, m12: 13000, p12: 12000 },
 ];
 
 export default function MarketingHomePage() {
@@ -82,7 +82,7 @@ export default function MarketingHomePage() {
           </h1>
 
           <p className="mt-6 text-lg sm:text-xl font-medium text-forge-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Disciplined Capital Growth & Fixed Savings. Lock USD, GBP, BTC, ETH, or SOL and earn guaranteed returns from +6% to +162%.
+            Disciplined Capital Growth & Fixed Savings. Lock USD, GBP, BTC, ETH, or SOL and earn guaranteed returns from +100% to +1200%.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -111,7 +111,7 @@ export default function MarketingHomePage() {
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-forge-gray-400">Yield Range</p>
-              <p className="font-display font-extrabold text-2xl text-market-up mt-0.5">+6% to +162%</p>
+              <p className="font-display font-extrabold text-2xl text-market-up mt-0.5">+100% to +1200%</p>
               <p className="text-xs text-forge-gray-500 mt-0.5">Fixed contracted rates</p>
             </div>
             <div>
@@ -319,11 +319,11 @@ export default function MarketingHomePage() {
               <thead>
                 <tr className="border-b border-forge-gray-200 text-xs font-bold uppercase tracking-wider text-forge-gray-500 bg-forge-gray-50/50">
                   <th className="py-4 px-4">Starting Capital</th>
-                  <th className="py-4 px-4">1 Month (+6%)</th>
-                  <th className="py-4 px-4">2 Months (+15%)</th>
-                  <th className="py-4 px-4">3 Months (+27%)</th>
-                  <th className="py-4 px-4">6 Months (+66%)</th>
-                  <th className="py-4 px-4">12 Months (+162%)</th>
+                  <th className="py-4 px-4">1 Month (+100%)</th>
+                  <th className="py-4 px-4">2 Months (+200%)</th>
+                  <th className="py-4 px-4">3 Months (+300%)</th>
+                  <th className="py-4 px-4">6 Months (+600%)</th>
+                  <th className="py-4 px-4">12 Months (+1200%)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-forge-gray-100 font-medium">
@@ -438,7 +438,7 @@ export default function MarketingHomePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             { step: "01", title: "Deposit Capital", desc: "Add USD, GBP, BTC, ETH, or SOL with as little as $50 starting funds.", icon: Wallet },
-            { step: "02", title: "Select Growth Plan", desc: "Choose a duration from 1 to 12 months with fixed returns up to +162%.", icon: Clock },
+            { step: "02", title: "Select Growth Plan", desc: "Choose a duration from 1 to 12 months with fixed returns up to +1200%.", icon: Clock },
             { step: "03", title: "Accrue Interest", desc: "Your capital compounds automatically with guaranteed contractual yields.", icon: TrendingUp },
             { step: "04", title: "Withdraw Matured Funds", desc: "Disburse your principal plus interest directly to your external account.", icon: ArrowUpRight },
           ].map((item) => (
