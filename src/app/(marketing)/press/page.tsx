@@ -4,7 +4,7 @@ export default function PressPage() {
   const releases = [
     {
       date: "October 5, 2026",
-      title: "Forge Capital Reports Record Inflows in Fixed-Term Growth Plans",
+      title: "Forge Capital Reports Record Inflows in Fixed-Term Investment Plans",
       excerpt: "Fixed-term capital commitments across 1-month and 12-month plans reached new milestones as savers seek predictable, contracted compound yields."
     },
     {

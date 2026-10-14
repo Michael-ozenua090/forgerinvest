@@ -96,7 +96,7 @@ export default function PlansPage() {
             <Sparkles size={14} /> Guaranteed Growth & Compound Yield
           </div>
           <h1 className="font-display font-extrabold text-3xl sm:text-4xl text-forge-gray-900 tracking-tight">
-            Fixed-Term Capital Growth Plans
+            Fixed-Term Capital Investment Plans
           </h1>
           <p className="font-medium text-forge-gray-600 mt-2 max-w-2xl text-sm sm:text-base">
             Disciplined wealth accumulation. Lock your capital in USD, GBP, or digital assets (BTC, ETH, SOL) with transparent fixed returns and automated maturity disbursement.
@@ -226,7 +226,7 @@ export default function PlansPage() {
                 </span>
               </div>
               <h2 className="font-display font-extrabold text-2xl text-forge-gray-900 mt-1">
-                {planInfo.label} Growth Plan
+                {planInfo.label} Investment Plan
               </h2>
             </div>
 
@@ -415,7 +415,7 @@ export default function PlansPage() {
                   Account Funding Required
                 </h3>
                 <p className="text-sm font-medium text-forge-gray-600 leading-relaxed px-2">
-                  You need <strong className="text-forge-gray-900">{formatCrypto(capitalInActiveCurrency, activeCurrency)}</strong> ({formatFiat(capitalUsd)}) to activate this <strong className="text-forge-gray-900">{planInfo.label} Growth Plan</strong>, but your available balance is <strong className="text-forge-gray-900">{formatCrypto(availableInActiveCurrency, activeCurrency)}</strong>.
+                  You need <strong className="text-forge-gray-900">{formatCrypto(capitalInActiveCurrency, activeCurrency)}</strong> ({formatFiat(capitalUsd)}) to activate this <strong className="text-forge-gray-900">{planInfo.label} Investment Plan</strong>, but your available balance is <strong className="text-forge-gray-900">{formatCrypto(availableInActiveCurrency, activeCurrency)}</strong>.
                 </p>
               </div>
 

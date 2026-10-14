@@ -69,7 +69,7 @@ export default function PortfolioPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-forge-gray-200 pb-6">
         <div>
           <h1 className="font-display font-extrabold text-3xl sm:text-4xl text-forge-gray-900 tracking-tight">
-            Growth Plans Portfolio
+            Investment Plans Portfolio
           </h1>
           <p className="font-medium text-forge-gray-600 mt-1">
             Track your active savings contracts, accrued yields, and matured capital distributions.
@@ -167,13 +167,13 @@ export default function PortfolioPage() {
             No Plans Found
           </h3>
           <p className="text-sm text-forge-gray-500 max-w-md mx-auto">
-            You don't have any growth plans matching this filter. Start locking capital today to generate fixed compounded yields.
+            You don't have any investment plans matching this filter. Start locking capital today to generate fixed compounded yields.
           </p>
           <Link
             href={ROUTES.app.plans}
             className="inline-flex items-center gap-2 px-6 py-3 bg-forge-orange text-white font-bold rounded-xl hover:bg-forge-orange-hover transition-colors text-sm shadow-sm"
           >
-            Explore Growth Plans
+            Explore Investment Plans
           </Link>
         </div>
       ) : (
@@ -192,7 +192,7 @@ export default function PortfolioPage() {
                 <div className="space-y-1.5 min-w-0">
                   <div className="flex items-center gap-3">
                     <span className="font-display font-extrabold text-lg text-forge-gray-900">
-                      {plan.durationMonths}-Month Fixed Growth Plan
+                      {plan.durationMonths}-Month Fixed Investment Plan
                     </span>
                     
                     {/* Status Badge */}

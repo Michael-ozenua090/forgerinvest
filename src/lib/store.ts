@@ -283,7 +283,7 @@ export const useStore = create<AppState>()(
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          set({ toastMessage: "Please sign in to activate a growth plan." });
+          set({ toastMessage: "Please sign in to activate an investment plan." });
           return false;
         }
 
@@ -342,7 +342,7 @@ export const useStore = create<AppState>()(
         }
 
         // 3. Insert transaction into Supabase transactions table
-        const desc = `${config.label} Fixed Growth Plan ($${capitalUsd.toFixed(2)} USD @ +${config.ratePercent}%)`;
+        const desc = `${config.label} Fixed Investment Plan ($${capitalUsd.toFixed(2)} USD @ +${config.ratePercent}%)`;
         const { data: insertedTx } = await supabase
           .from('transactions')
           .insert({
@@ -360,7 +360,7 @@ export const useStore = create<AppState>()(
         try {
           await supabase.from('notifications').insert({
             user_id: user.id,
-            title: 'Growth Plan Activated',
+            title: 'Investment Plan Activated',
             message: `Locked $${capitalUsd.toFixed(2)} USD for ${config.label} (+${config.ratePercent}% return).`,
             type: 'SUCCESS',
           });
@@ -404,7 +404,7 @@ export const useStore = create<AppState>()(
             currency: (insertedTx.currency || currency) as CurrencyType,
             status: 'COMPLETED',
           }, ...state.transactions] : state.transactions,
-          toastMessage: `Successfully activated ${config.label} Growth Plan!`,
+          toastMessage: `Successfully activated ${config.label} Investment Plan!`,
         });
 
         return true;

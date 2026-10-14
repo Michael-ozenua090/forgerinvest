@@ -31,7 +31,7 @@ import { createClient } from "@/lib/supabase/client";
 // Intentional Friction Architecture: KYC link is removed from navigation menus
 const navLinks = [
   { name: "Dashboard", icon: LayoutDashboard, href: ROUTES.app.dashboard },
-  { name: "Growth Plans", icon: TrendingUp, href: ROUTES.app.plans },
+  { name: "Investment Plans", icon: TrendingUp, href: ROUTES.app.plans },
   { name: "Active Portfolio", icon: Briefcase, href: ROUTES.app.portfolio },
   { name: "Wallet / Funding", icon: Wallet, href: ROUTES.app.wallet.home },
   { name: "Settings", icon: Settings, href: ROUTES.app.settings },
@@ -566,7 +566,7 @@ export default function PortalShell({ children }: { children: React.ReactNode })
               className="hidden sm:flex items-center gap-2 pl-3 pr-2 py-1.5 text-sm rounded-lg border border-forge-gray-200 text-forge-gray-400 hover:border-forge-orange hover:text-forge-gray-900 w-64 transition-all"
             >
               <Search size={16} />
-              <span className="flex-1 text-left">Search growth plans...</span>
+              <span className="flex-1 text-left">Search investment plans...</span>
               <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-forge-gray-200 bg-forge-gray-50 px-1.5 font-mono text-[10px] font-medium text-forge-gray-500">
                 <span className="text-xs">⌘</span>K
               </kbd>

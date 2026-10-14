@@ -98,7 +98,7 @@ export default function MarketingLayout({
           {/* Regulatory Disclaimers */}
           <div className="border-t border-forge-gray-800 pt-8 text-xs text-forge-gray-500 space-y-3 leading-relaxed">
             <p>
-              Forge Capital provides structured fixed-term savings and capital growth plans across USD, GBP, and digital assets. Educational and wealth simulation platform designed for disciplined capital accumulation.
+              Forge Capital provides structured fixed-term savings and capital investment plans across USD, GBP, and digital assets. Educational and wealth simulation platform designed for disciplined capital accumulation.
             </p>
             <p>&copy; 2026 Forge Global, Inc. All rights reserved.</p>
           </div>

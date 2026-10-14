@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     template: "%s | Forge Capital",
   },
   description:
-    "Forge Capital empowers individuals to turn small capital into significant wealth through disciplined fixed-term savings, compound growth plans, and multi-asset yield infrastructure.",
+    "Forge Capital empowers individuals to turn small capital into significant wealth through disciplined fixed-term savings, compound investment plans, and multi-asset yield infrastructure.",
   keywords: [
     "high-growth savings",
     "fixed-term savings",

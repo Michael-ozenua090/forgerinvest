@@ -90,7 +90,7 @@ export default function MarketingHomePage() {
               href={ROUTES.auth.register} 
               className="w-full sm:w-auto px-8 py-4 bg-forge-orange text-white font-bold rounded-xl hover:bg-forge-orange-hover transition-all shadow-[0_4px_14px_rgba(255,90,0,0.25)] flex items-center justify-center gap-2 text-base group"
             >
-              View Growth Plans
+              View Investment Plans
               <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </Link>
             
@@ -245,7 +245,7 @@ export default function MarketingHomePage() {
                 Simulated Projection
               </span>
               <h3 className="font-display font-extrabold text-2xl text-forge-gray-900 mt-1">
-                {planInfo.label} Growth Plan
+                {planInfo.label} Investment Plan
               </h3>
             </div>
 
@@ -438,7 +438,7 @@ export default function MarketingHomePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             { step: "01", title: "Deposit Capital", desc: "Add USD, GBP, BTC, ETH, or SOL with as little as $50 starting funds.", icon: Wallet },
-            { step: "02", title: "Select Growth Plan", desc: "Choose a duration from 1 to 12 months with fixed returns up to +1200%.", icon: Clock },
+            { step: "02", title: "Select Investment Plan", desc: "Choose a duration from 1 to 12 months with fixed returns up to +1200%.", icon: Clock },
             { step: "03", title: "Accrue Interest", desc: "Your capital compounds automatically with guaranteed contractual yields.", icon: TrendingUp },
             { step: "04", title: "Withdraw Matured Funds", desc: "Disburse your principal plus interest directly to your external account.", icon: ArrowUpRight },
           ].map((item) => (

@@ -10,7 +10,7 @@ export default function MarketplacePage() {
     <div className="container mx-auto px-4 py-16 max-w-6xl">
       <div className="mb-10 text-center max-w-2xl mx-auto">
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-forge-orange-wash text-forge-orange rounded-full text-xs font-bold uppercase tracking-wider mb-3 border border-forge-orange/20">
-          <Sparkles size={14} /> Fixed-Term Growth Plans
+          <Sparkles size={14} /> Fixed-Term Investment Plans
         </div>
         <h1 className="text-4xl font-extrabold text-forge-gray-900 tracking-tight font-display">
           Capital Accumulation Plans

@@ -6,8 +6,8 @@ export default function HelpCenterPage() {
     {
       title: "Capital Growth & Savings Plans",
       faqs: [
-        { q: "What is a Fixed-Term Growth Plan?", a: "A structured capital accumulation contract that locks principal for a predetermined duration (1, 2, 3, 6, or 12 months) and delivers predictable contracted yields from +100% to +1200% upon maturity." },
-        { q: "What is the minimum starting capital?", a: "You can activate a growth plan with as little as $50.00 USD, or the equivalent in GBP, BTC, ETH, and SOL." }
+        { q: "What is a Fixed-Term Investment Plan?", a: "A structured capital accumulation contract that locks principal for a predetermined duration (1, 2, 3, 6, or 12 months) and delivers predictable contracted yields from +100% to +1200% upon maturity." },
+        { q: "What is the minimum starting capital?", a: "You can activate an investment plan with as little as $50.00 USD, or the equivalent in GBP, BTC, ETH, and SOL." }
       ]
     },
     {

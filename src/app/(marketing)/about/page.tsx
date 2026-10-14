@@ -23,7 +23,7 @@ export default function AboutPage() {
           <h2 className="font-display font-extrabold text-3xl text-forge-gray-900 mb-6">Our Mission</h2>
           <div className="prose prose-lg text-forge-gray-600 max-w-none space-y-6">
             <p>
-              We are building the future of capital accumulation by combining algorithmic liquidity management with transparent, fixed-yield principles. Our platform democratizes access to institutional-grade growth plans with starting capital as accessible as $50.00 USD.
+              We are building the future of capital accumulation by combining algorithmic liquidity management with transparent, fixed-yield principles. Our platform democratizes access to institutional-grade investment plans with starting capital as accessible as $50.00 USD.
             </p>
             <p>
               From 1-month accelerated cycles to 12-month compounding horizons, we provide the infrastructure savers and investors need to protect principal and compound returns across fiat (USD, GBP) and major digital assets (BTC, ETH, SOL).

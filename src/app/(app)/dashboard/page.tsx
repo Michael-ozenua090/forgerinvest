@@ -68,7 +68,7 @@ export default function DashboardPage() {
           href={ROUTES.app.plans} 
           className="self-start sm:self-auto inline-flex items-center gap-2 px-5 py-3 bg-forge-orange text-white font-bold rounded-xl hover:bg-forge-orange-hover transition-colors shadow-[0_4px_14px_rgba(255,90,0,0.25)] text-sm"
         >
-          <PlusCircle size={18} /> Start Growth Plan
+          <PlusCircle size={18} /> Start Investment Plan
         </Link>
       </div>
 
@@ -180,7 +180,7 @@ export default function DashboardPage() {
               </div>
             ) : savingsPlans.length === 0 ? (
               <div className="clean-card bg-white p-8 rounded-2xl border border-forge-gray-200 text-center">
-                <p className="text-sm text-forge-gray-500 font-medium mb-3">No active growth plans yet.</p>
+                <p className="text-sm text-forge-gray-500 font-medium mb-3">No active investment plans yet.</p>
                 <Link 
                   href={ROUTES.app.plans}
                   className="px-4 py-2 bg-forge-orange text-white text-xs font-bold rounded-lg hover:bg-forge-orange-hover"
@@ -197,7 +197,7 @@ export default function DashboardPage() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-base text-forge-gray-900">
-                        {plan.durationMonths}-Month Fixed Growth
+                        {plan.durationMonths}-Month Fixed Investment Plan
                       </span>
                       <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
                         plan.status === 'MATURED'
@@ -250,7 +250,7 @@ export default function DashboardPage() {
                   <TrendingUp size={24} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-forge-gray-900 group-hover:text-forge-orange transition-colors">Start Growth Plan</h4>
+                  <h4 className="font-bold text-forge-gray-900 group-hover:text-forge-orange transition-colors">Start Investment Plan</h4>
                   <p className="text-xs font-medium text-forge-gray-600 mt-1">Lock capital from 1 to 12 months for up to +1200% returns.</p>
                 </div>
               </Link>
